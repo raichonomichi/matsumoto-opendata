@@ -11,6 +11,7 @@
       "!dist",
       "!.astro",
       "!.wrangler",
+      "!src/data",
       "!pnpm-lock.yaml",
       "!pnpm-workspace.yaml"
     ]

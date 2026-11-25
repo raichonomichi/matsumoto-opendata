@@ -1,0 +1,81 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="プライバシーポリシー"
+  description="松本市オープンデータ活用サイトのプライバシーポリシー。サイト配信時の通信情報の取り扱いや、お問い合わせ窓口について記載しています。"
+>
+  <article class="mx-auto max-w-3xl space-y-10">
+    <header>
+      <p class="font-mono text-xs font-semibold tracking-wider text-alps-700 uppercase">
+        Privacy Policy
+      </p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+        プライバシーポリシー
+      </h1>
+      <p class="mt-4 text-sm leading-relaxed text-slate-600">
+        「松本市オープンデータ活用サイト」（以下、本サイト）は、「<a
+          href="https://raichonomichi.net/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-medium text-alps-800 underline underline-offset-2 hover:text-alps-950"
+        >雷鳥の道</a>」プロジェクトの一環として、
+        <a
+          href="https://muchuu.net/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-medium text-alps-800 underline underline-offset-2 hover:text-alps-950"
+        >muchuu.net</a>（露崎勇大）が運営しています。
+      </p>
+    </header>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-bold tracking-tight text-slate-900">
+        サイトの配信
+      </h2>
+      <p class="text-sm leading-relaxed text-slate-700">
+        本サイトは Cloudflare Workers の静的アセット配信機能を利用して公開しています。Cloudflare は配信の安定性やセキュリティ確保のため、アクセス元の IP アドレスやリクエスト情報などの通信ログを処理する場合があります。詳細は
+        <a
+          href="https://www.cloudflare.com/ja-jp/privacypolicy/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-medium text-alps-800 underline underline-offset-2 hover:text-alps-950"
+        >Cloudflare のプライバシーポリシー</a>をご確認ください。
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-bold tracking-tight text-slate-900">
+        アクセス解析
+      </h2>
+      <p class="text-sm leading-relaxed text-slate-700">
+        現時点で、本サイトでは Google アナリティクス等のサードパーティ製アクセス解析ツールや計測用 Cookie は導入していません。今後アクセス解析を導入する場合は、収集する情報・利用目的・計測の停止方法を本ページに明記して更新します。
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-bold tracking-tight text-slate-900">
+        外部リンクについて
+      </h2>
+      <p class="text-sm leading-relaxed text-slate-700">
+        本サイトには、松本市・長野県・国土交通省などのオープンデータ一次配布元や、GitHub・関連サイトへの外部リンクが含まれます。リンク先サイトにおける情報の取り扱いについては、各サイトのプライバシーポリシーをご確認ください。
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-bold tracking-tight text-slate-900">
+        お問い合わせ
+      </h2>
+      <p class="text-sm leading-relaxed text-slate-700">
+        本サイトでの情報の取り扱いに関するご質問は、運営者の窓口で受け付けています。
+        <a
+          href="https://muchuu.net/contact/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-medium text-alps-800 underline underline-offset-2 hover:text-alps-950"
+        >muchuu.net のお問い合わせフォーム</a>よりご連絡ください。
+      </p>
+    </section>
+  </article>
+</BaseLayout>

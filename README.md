@@ -21,12 +21,14 @@
 │   │   ├── datasets/        # オープンデータのメタ情報（出典・ライセンス・更新日）
 │   │   └── services/        # 公開サービスのメタ情報（TOPページ一覧へ自動反映）
 │   ├── components/          # 共通UI（ServiceCard, DatasetAttribution 等）
+│   ├── data/                # サービスビルド用の整形済みデータ
 │   ├── layouts/             # 共通レイアウト（出典フッター自動表示）
 │   ├── lib/                 # 共通Zodスキーマ・ユーティリティ
 │   └── pages/
 │       ├── index.astro      # TOP（オープンデータ概要・公開サービス一覧）
 │       ├── data/            # データ一覧（出典・ライセンスカタログ）
 │       └── <service-slug>/  # 1ページ完結型ミニサービス
+├── pipelines/               # データ取得・整形スクリプト
 ├── public/
 │   └── _headers             # セキュリティヘッダ設定
 └── wrangler.jsonc           # Cloudflare Workers Static Assets 設定

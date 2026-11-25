@@ -16,6 +16,7 @@
     "format": "biome format --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pipeline:yamagoya": "tsx pipelines/build-yamagoya.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {

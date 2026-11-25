@@ -1,0 +1,671 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  type DifficultyGrade,
+  yamagoyaAreas,
+  yamagoyaDatasetSchema,
+} from "@/lib/yamagoya-schema";
+
+const rawJson = readFileSync(path.resolve("src/data/yamagoya.json"), "utf-8");
+const dataset = yamagoyaDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = [
+  "matsumoto-ryokan-registry",
+  "matsumoto-gtfs-jp",
+  "nagano-mountain-grading",
+];
+
+const areaCounts = Object.fromEntries(
+  yamagoyaAreas.map((area) => [
+    area,
+    dataset.huts.filter((h) => h.area === area).length,
+  ]),
+);
+
+const gtfsStopCount = new Set(
+  dataset.huts.flatMap((h) =>
+    h.busAccess.filter((b) => b.kind === "gtfs").map((b) => b.stopName),
+  ),
+).size;
+
+const difficultyBadgeClass: Record<DifficultyGrade, string> = {
+  A: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  B: "bg-sky-50 text-sky-800 ring-sky-200",
+  C: "bg-amber-50 text-amber-800 ring-amber-200",
+  D: "bg-orange-50 text-orange-800 ring-orange-200",
+  E: "bg-rose-50 text-rose-800 ring-rose-200",
+};
+
+const difficultyDescriptions: Record<DifficultyGrade, string> = {
+  A: "概ね整備された登山道",
+  B: "沢・崖・場所により雪渓などを通過",
+  C: "ハシゴ・くさり場などがあり緊張を要する",
+  D: "厳しい岩稜や不安定なガレ場・急峻な雪渓",
+  E: "高度な岩稜通過技術とルートファインディングが必要",
+};
+---
+
+<BaseLayout
+  title="ヤマゴヤ・レジストリ"
+  description="松本市内の北アルプス・乗鞍・美ヶ原の山小屋について、旅館業営業許可台帳・信州山のグレーディング・最寄りバス停時刻を一覧検索できるデータベース。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-9 text-white sm:px-9 sm:py-11">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 font-mono text-xs text-alps-200 ring-1 ring-white/15">
+          Yamagoya Registry
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          データ生成日: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        ヤマゴヤ・レジストリ
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        松本市内の主要山岳エリア（北アルプス・乗鞍・美ヶ原）の山小屋を対象に、松本市保健所の旅館業営業許可台帳・長野県「信州 山のグレーディング」・松本市公式 GTFS-JP バス時刻を結合したデータベースです。
+      </p>
+
+      <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">収録山小屋</p>
+          <p class="mt-0.5 text-xl font-bold">{dataset.count} 軒</p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">対象エリア</p>
+          <p class="mt-0.5 text-xl font-bold">{yamagoyaAreas.length} 山域</p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">GTFS時刻結合</p>
+          <p class="mt-0.5 text-xl font-bold">{gtfsStopCount} 停留所</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Notice about reservation / availability -->
+    <aside
+      aria-label="ご利用上の注意"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        予約・空き状況・営業期間について
+      </p>
+      <p class="mt-1 text-amber-900/90">
+        {dataset.notice}
+      </p>
+    </aside>
+
+    <!-- Filter & Sort Bar -->
+    <section
+      aria-label="絞り込み・並び替え"
+      class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5"
+    >
+      <div class="flex flex-wrap items-center gap-2" role="group" aria-label="エリアで絞り込み">
+        <button
+          type="button"
+          data-area-btn="all"
+          aria-pressed="true"
+          class="area-btn rounded-full bg-alps-900 px-3.5 py-1.5 text-xs font-semibold text-white transition"
+        >
+          すべて ({dataset.count})
+        </button>
+        {yamagoyaAreas.map((area) => (
+          <button
+            type="button"
+            data-area-btn={area}
+            aria-pressed="false"
+            class="area-btn rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            {area} ({areaCounts[area] ?? 0})
+          </button>
+        ))}
+      </div>
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <label class="block lg:col-span-2">
+          <span class="block text-xs font-medium text-slate-600">キーワード検索</span>
+          <input
+            id="filter-keyword"
+            type="search"
+            placeholder="山小屋名・ルート名・バス停名..."
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-alps-500 focus:outline-none"
+          />
+        </label>
+
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-600">技術的難易度</span>
+          <select
+            id="filter-difficulty"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-500 focus:outline-none"
+          >
+            <option value="all">すべて（A〜E）</option>
+            <option value="B">B（沢・崖・雪渓等）</option>
+            <option value="C">C（ハシゴ・くさり場）</option>
+            <option value="D">D（厳しい岩稜・急斜面）</option>
+            <option value="E">E（高度な岩稜通過）</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-600">体力度</span>
+          <select
+            id="filter-physical"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-500 focus:outline-none"
+          >
+            <option value="all">すべて（1〜10）</option>
+            <option value="1-4">1〜4（日帰り〜1泊目安）</option>
+            <option value="5-6">5〜6（1〜2泊目安）</option>
+            <option value="7-10">7〜10（2泊以上・縦走）</option>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-600">並び替え</span>
+          <select
+            id="sort-order"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-500 focus:outline-none"
+          >
+            <option value="elevation-desc">標高が高い順</option>
+            <option value="elevation-asc">標高が低い順</option>
+            <option value="physical-asc">体力度が低い順</option>
+            <option value="physical-desc">体力度が高い順</option>
+            <option value="capacity-desc">定員が多い順</option>
+            <option value="permitted-asc">許可日が古い順</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs">
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="inline-flex cursor-pointer items-center gap-1.5 text-slate-700">
+            <input
+              id="filter-gtfs-only"
+              type="checkbox"
+              class="h-4 w-4 rounded border-slate-300 text-alps-700 focus:ring-alps-500"
+            />
+            <span>松本市 GTFS-JP 時刻結合ありのみ表示</span>
+          </label>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <p class="font-medium text-slate-700">
+            表示中: <span id="visible-count" class="font-bold text-alps-900">{dataset.count}</span> / {dataset.count} 軒
+          </p>
+          <button
+            id="filter-reset"
+            type="button"
+            class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-medium text-slate-600 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            条件をリセット
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty state -->
+    <div
+      id="empty-state"
+      class="hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center"
+    >
+      <p class="text-base font-semibold text-slate-800">
+        条件に一致する山小屋が見つかりませんでした
+      </p>
+      <p class="mt-1.5 text-sm text-slate-600">
+        エリアや難易度・キーワードの条件を緩めて再度お試しください。
+      </p>
+    </div>
+
+    <!-- Hut Cards List -->
+    <section aria-label="山小屋一覧" id="hut-list" class="space-y-4">
+      {dataset.huts.map((hut) => {
+        const hasGtfs = hut.busAccess.some((b) => b.kind === "gtfs");
+        const primaryBus = hut.busAccess[0];
+        const searchBlob = [
+          hut.name,
+          hut.registryName,
+          hut.area,
+          hut.subArea,
+          hut.summary,
+          hut.permit.address,
+          hut.permit.operator ?? "",
+          ...hut.grading.map((g) => g.routeName),
+          ...hut.busAccess.map((b) => `${b.stopName} ${b.routeName}`),
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return (
+          <article
+            data-hut-card
+            data-area={hut.area}
+            data-difficulty={hut.primaryDifficultyGrade}
+            data-physical={String(hut.primaryPhysicalLevel)}
+            data-elevation={String(hut.elevationM)}
+            data-capacity={String(hut.permit.capacity ?? 0)}
+            data-permitted={hut.permit.permittedAt ?? "9999-99-99"}
+            data-has-gtfs={hasGtfs ? "true" : "false"}
+            data-search={searchBlob}
+            class="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-alps-300 sm:p-6"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="rounded-md bg-alps-100 px-2 py-0.5 text-xs font-semibold text-alps-900">
+                    {hut.area}
+                  </span>
+                  <span class="text-xs text-slate-500">{hut.subArea}</span>
+                  <span class="font-mono text-xs font-semibold text-alps-800">
+                    標高 {hut.elevationM.toLocaleString("ja-JP")} m
+                  </span>
+                </div>
+                <h2 class="mt-2 text-lg font-bold text-slate-900 sm:text-xl">
+                  {hut.name}
+                </h2>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800">
+                  体力度 {hut.primaryPhysicalLevel} / 10
+                </span>
+                <span
+                  class:list={[
+                    "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                    difficultyBadgeClass[hut.primaryDifficultyGrade],
+                  ]}
+                  title={difficultyDescriptions[hut.primaryDifficultyGrade]}
+                >
+                  難易度 {hut.primaryDifficultyGrade}
+                </span>
+              </div>
+            </div>
+
+            <p class="mt-2.5 text-sm leading-relaxed text-slate-600">
+              {hut.summary}
+            </p>
+
+            <!-- Compact summary strip -->
+            <dl class="mt-4 grid gap-3 rounded-xl bg-slate-50/90 p-3.5 text-xs sm:grid-cols-3">
+              <div>
+                <dt class="font-medium text-slate-500">営業許可（松本市台帳）</dt>
+                <dd class="mt-0.5 font-medium text-slate-800">
+                  {hut.permit.category}
+                  {hut.permit.capacity !== null && ` / 定員 ${hut.permit.capacity}名`}
+                  {hut.permit.permittedAt && ` / ${hut.permit.permittedAt.slice(0, 4)}年許可`}
+                </dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">代表ルート（山のグレーディング）</dt>
+                <dd class="mt-0.5 font-medium text-slate-800">
+                  {hut.grading[0].routeName}
+                </dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">最寄りバス停・アクセス</dt>
+                <dd class="mt-0.5 flex flex-wrap items-center gap-1.5 font-medium text-slate-800">
+                  {hasGtfs ? (
+                    <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+                      GTFS時刻あり
+                    </span>
+                  ) : (
+                    <span class="rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                      公式時刻表
+                    </span>
+                  )}
+                  <span>{primaryBus.stopName}</span>
+                </dd>
+              </div>
+            </dl>
+
+            <!-- Expandable details -->
+            <details class="group mt-4 border-t border-slate-100 pt-3.5">
+              <summary class="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-alps-800 hover:text-alps-700 sm:text-sm">
+                <span>最寄りバス停の時刻・グレーディング詳細・営業許可台帳を見る</span>
+                <span class="ml-2 rounded-lg bg-alps-50 px-2.5 py-1 text-xs text-alps-800 transition group-open:bg-alps-100">
+                  <span class="group-open:hidden">開く ▾</span>
+                  <span class="hidden group-open:inline">閉じる ▴</span>
+                </span>
+              </summary>
+
+              <div class="mt-4 space-y-5 text-xs sm:text-sm">
+                <!-- Bus Access -->
+                <div>
+                  <h3 class="text-xs font-bold tracking-wider text-alps-800 uppercase">
+                    最寄りバス停・アクセス情報
+                  </h3>
+                  <div class="mt-2.5 space-y-3">
+                    {hut.busAccess.map((bus) =>
+                      bus.kind === "gtfs" ? (
+                        <div class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+                          <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <span class="inline-block rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-900">
+                                松本市 GTFS-JP 時刻結合
+                              </span>
+                              <p class="mt-1 font-bold text-slate-900">
+                                {bus.stopName}（{bus.routeName}）
+                              </p>
+                              <p class="text-xs text-slate-600">{bus.operator}</p>
+                            </div>
+                            <p class="font-mono text-[11px] text-slate-500">
+                              ダイヤ有効期間: {bus.validFrom} 〜 {bus.validUntil}
+                            </p>
+                          </div>
+                          <p class="mt-2 text-xs leading-relaxed text-slate-700">
+                            {bus.accessNote}
+                          </p>
+                          <div class="mt-3 space-y-2">
+                            {bus.schedules.map((sch) => (
+                              <div class="rounded-lg bg-white p-3 ring-1 ring-emerald-200/80">
+                                <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                  <p class="font-semibold text-slate-900">
+                                    {sch.headsign} 行き
+                                    <span class="ml-2 font-normal text-slate-500">
+                                      {sch.serviceLabel}（基本: {sch.daysLabel}）
+                                    </span>
+                                  </p>
+                                  <p class="font-mono text-xs font-semibold text-alps-800">
+                                    始発 {sch.firstDeparture} / 終発 {sch.lastDeparture}（{sch.tripCount}便）
+                                  </p>
+                                </div>
+                                <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                                  {sch.serviceStartDate && sch.serviceEndDate && (
+                                    <span>
+                                      適用期間: {sch.serviceStartDate} 〜 {sch.serviceEndDate}
+                                    </span>
+                                  )}
+                                  {sch.addedDates.length > 0 && (
+                                    <span class="rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-800 ring-1 ring-amber-200">
+                                      追加運行日あり（{sch.addedDates.length}日: {sch.addedDates.slice(0, 3).join(", ")}
+                                      {sch.addedDates.length > 3 ? " ほか" : ""}）
+                                    </span>
+                                  )}
+                                  {sch.removedDates.length > 0 && (
+                                    <span class="rounded bg-rose-50 px-1.5 py-0.5 font-medium text-rose-800 ring-1 ring-rose-200">
+                                      運休例外日あり（{sch.removedDates.length}日: {sch.removedDates.slice(0, 3).join(", ")}
+                                      {sch.removedDates.length > 3 ? " ほか" : ""}）
+                                    </span>
+                                  )}
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                  {sch.departures.slice(0, 12).map((dep) => (
+                                    <span class="rounded bg-slate-100 px-2 py-0.5 font-mono text-[11px] text-slate-700">
+                                      {dep}
+                                    </span>
+                                  ))}
+                                  {sch.departures.length > 12 && (
+                                    <span class="rounded bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                                      ほか {sch.departures.length - 12} 便
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                          <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <span class="inline-block rounded bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                                公式時刻表リンク（GTFS-JP 対象外路線）
+                              </span>
+                              <p class="mt-1 font-bold text-slate-900">
+                                {bus.stopName}
+                              </p>
+                              <p class="text-xs text-slate-600">
+                                {bus.routeName} / {bus.operator}
+                              </p>
+                            </div>
+                            <a
+                              href={bus.timetableUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="inline-flex shrink-0 items-center rounded-lg bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-alps-800"
+                            >
+                              公式時刻表を見る ↗
+                            </a>
+                          </div>
+                          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+                            {bus.accessNote}
+                          </p>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </div>
+
+                <!-- Mountain Grading -->
+                <div>
+                  <h3 class="text-xs font-bold tracking-wider text-alps-800 uppercase">
+                    信州 山のグレーディング（関連ルート）
+                  </h3>
+                  <div class="mt-2.5 grid gap-3 sm:grid-cols-2">
+                    {hut.grading.map((route) => (
+                      <div class="rounded-xl border border-slate-200 bg-white p-3.5">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                          <p class="font-semibold text-slate-900">
+                            #{route.routeNumber} {route.routeName}
+                          </p>
+                          <div class="flex items-center gap-1.5">
+                            <span class="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-800">
+                              体力度 {route.physicalLevel}
+                            </span>
+                            <span
+                              class:list={[
+                                "rounded px-2 py-0.5 text-[11px] font-semibold ring-1",
+                                difficultyBadgeClass[route.difficultyGrade],
+                              ]}
+                            >
+                              難易度 {route.difficultyGrade}
+                            </span>
+                          </div>
+                        </div>
+                        <dl class="mt-2.5 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                          <div>
+                            <dt class="text-slate-400">コースタイム / 距離</dt>
+                            <dd class="font-medium text-slate-800">
+                              {route.courseTimeHours} 時間 / {route.distanceKm} km
+                            </dd>
+                          </div>
+                          <div>
+                            <dt class="text-slate-400">累積登り / ルート定数</dt>
+                            <dd class="font-medium text-slate-800">
+                              +{Math.round(route.ascentKm * 1000).toLocaleString("ja-JP")} m / 定数 {route.routeConstant}
+                            </dd>
+                          </div>
+                          <div class="col-span-2">
+                            <dt class="text-slate-400">起終点・最高地点</dt>
+                            <dd class="font-medium text-slate-800">
+                              {route.startPoint}（{route.startElevationM}m）→ {route.highestPoint}（{route.highestElevationM}m）→ {route.endPoint}（{route.endElevationM}m）
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <!-- Permit Registry Details -->
+                <div>
+                  <h3 class="text-xs font-bold tracking-wider text-alps-800 uppercase">
+                    営業許可台帳（松本市 生活衛生施設データ）
+                  </h3>
+                  <dl class="mt-2.5 grid gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-xs sm:grid-cols-3">
+                    <div>
+                      <dt class="text-slate-500">台帳表記名 / ID</dt>
+                      <dd class="mt-0.5 font-medium text-slate-900">
+                        {hut.registryName}（ID: {hut.sourceRecordId}）
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500">営業種別</dt>
+                      <dd class="mt-0.5 font-medium text-slate-900">
+                        {hut.permit.category}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500">室数 / 定員数</dt>
+                      <dd class="mt-0.5 font-medium text-slate-900">
+                        {hut.permit.rooms !== null ? `${hut.permit.rooms} 室` : "記載なし"} /{" "}
+                        {hut.permit.capacity !== null ? `${hut.permit.capacity} 名` : "記載なし"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500">許可日 / 許可番号</dt>
+                      <dd class="mt-0.5 font-medium text-slate-900">
+                        {hut.permit.permittedAt ?? "記載なし"}（{hut.permit.permitNumber}）
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500">営業者</dt>
+                      <dd class="mt-0.5 font-medium text-slate-900">
+                        {hut.permit.operator ?? "台帳記載なし"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500">所在地</dt>
+                      <dd class="mt-0.5 font-medium text-slate-900">
+                        {hut.permit.postalCode ? `〒${hut.permit.postalCode} ` : ""}
+                        {hut.permit.address}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+            </details>
+          </article>
+        );
+      })}
+    </section>
+  </div>
+
+  <script>
+    const listEl = document.getElementById("hut-list");
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-hut-card]"),
+    );
+    const areaButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-area-btn]"),
+    );
+    const keywordInput = document.getElementById(
+      "filter-keyword",
+    ) as HTMLInputElement | null;
+    const difficultySelect = document.getElementById(
+      "filter-difficulty",
+    ) as HTMLSelectElement | null;
+    const physicalSelect = document.getElementById(
+      "filter-physical",
+    ) as HTMLSelectElement | null;
+    const sortSelect = document.getElementById(
+      "sort-order",
+    ) as HTMLSelectElement | null;
+    const gtfsCheckbox = document.getElementById(
+      "filter-gtfs-only",
+    ) as HTMLInputElement | null;
+    const resetButton = document.getElementById(
+      "filter-reset",
+    ) as HTMLButtonElement | null;
+    const visibleCountEl = document.getElementById("visible-count");
+    const emptyStateEl = document.getElementById("empty-state");
+
+    let selectedArea = "all";
+
+    function updateAreaButtons(): void {
+      for (const btn of areaButtons) {
+        const isSelected = btn.dataset.areaBtn === selectedArea;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "area-btn rounded-full bg-alps-900 px-3.5 py-1.5 text-xs font-semibold text-white transition"
+          : "area-btn rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function matchesPhysical(level: number, range: string): boolean {
+      if (range === "1-4") return level >= 1 && level <= 4;
+      if (range === "5-6") return level >= 5 && level <= 6;
+      if (range === "7-10") return level >= 7 && level <= 10;
+      return true;
+    }
+
+    function applyFilterAndSort(): void {
+      const keyword = (keywordInput?.value ?? "").trim().toLowerCase();
+      const difficulty = difficultySelect?.value ?? "all";
+      const physical = physicalSelect?.value ?? "all";
+      const gtfsOnly = gtfsCheckbox?.checked ?? false;
+      const sortBy = sortSelect?.value ?? "elevation-desc";
+
+      const sorted = [...cards].sort((a, b) => {
+        if (sortBy === "elevation-asc") {
+          return Number(a.dataset.elevation) - Number(b.dataset.elevation);
+        }
+        if (sortBy === "physical-asc") {
+          return Number(a.dataset.physical) - Number(b.dataset.physical);
+        }
+        if (sortBy === "physical-desc") {
+          return Number(b.dataset.physical) - Number(a.dataset.physical);
+        }
+        if (sortBy === "capacity-desc") {
+          return Number(b.dataset.capacity) - Number(a.dataset.capacity);
+        }
+        if (sortBy === "permitted-asc") {
+          return (a.dataset.permitted ?? "").localeCompare(
+            b.dataset.permitted ?? "",
+          );
+        }
+        return Number(b.dataset.elevation) - Number(a.dataset.elevation);
+      });
+
+      let visibleCount = 0;
+      for (const card of sorted) {
+        const areaOk =
+          selectedArea === "all" || card.dataset.area === selectedArea;
+        const diffOk =
+          difficulty === "all" || card.dataset.difficulty === difficulty;
+        const physOk = matchesPhysical(Number(card.dataset.physical), physical);
+        const gtfsOk = !gtfsOnly || card.dataset.hasGtfs === "true";
+        const kwOk =
+          keyword === "" || (card.dataset.search ?? "").includes(keyword);
+
+        const visible = areaOk && diffOk && physOk && gtfsOk && kwOk;
+        card.classList.toggle("hidden", !visible);
+        if (visible) visibleCount++;
+        listEl?.appendChild(card);
+      }
+
+      if (visibleCountEl) {
+        visibleCountEl.textContent = String(visibleCount);
+      }
+      emptyStateEl?.classList.toggle("hidden", visibleCount > 0);
+    }
+
+    for (const btn of areaButtons) {
+      btn.addEventListener("click", () => {
+        selectedArea = btn.dataset.areaBtn ?? "all";
+        updateAreaButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    keywordInput?.addEventListener("input", applyFilterAndSort);
+    difficultySelect?.addEventListener("change", applyFilterAndSort);
+    physicalSelect?.addEventListener("change", applyFilterAndSort);
+    sortSelect?.addEventListener("change", applyFilterAndSort);
+    gtfsCheckbox?.addEventListener("change", applyFilterAndSort);
+
+    resetButton?.addEventListener("click", () => {
+      selectedArea = "all";
+      if (keywordInput) keywordInput.value = "";
+      if (difficultySelect) difficultySelect.value = "all";
+      if (physicalSelect) physicalSelect.value = "all";
+      if (sortSelect) sortSelect.value = "elevation-desc";
+      if (gtfsCheckbox) gtfsCheckbox.checked = false;
+      updateAreaButtons();
+      applyFilterAndSort();
+    });
+  </script>
+</BaseLayout>

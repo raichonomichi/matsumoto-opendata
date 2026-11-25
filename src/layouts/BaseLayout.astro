@@ -102,27 +102,110 @@ const navItems = [
     </main>
 
     <footer class="border-t border-slate-200 bg-slate-50">
-      <div class="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div class="space-y-1">
-          <p class="font-medium text-slate-800">
+      <div class="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 text-xs text-slate-600 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+        <div class="max-w-md space-y-2">
+          <p class="text-sm font-bold tracking-tight text-alps-950">
             松本市オープンデータ活用サイト（非公式・個人プロジェクト）
           </p>
-          <p>
+          <p class="text-slate-700">
+            <a
+              href="https://raichonomichi.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium text-alps-800 hover:underline"
+            >
+              雷鳥の道
+            </a>
+            プロジェクト / 運営
+            <a
+              href="https://muchuu.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium text-alps-800 hover:underline"
+            >
+              muchuu.net
+            </a>
+          </p>
+          <p class="leading-relaxed">
             本サイトは松本市等が公開するオープンデータを独自に加工・可視化して提供しています。最新かつ正確な情報は各公式配布元をご確認ください。
           </p>
         </div>
-        <div class="flex shrink-0 items-center gap-4">
-          <a href="/data/" class="hover:text-alps-800 hover:underline">
-            データ一覧
-          </a>
-          <a
-            href="https://github.com/raichonomichi/matsumoto-opendata/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="hover:text-alps-800 hover:underline"
-          >
-            アイデア・要望 (Issues)
-          </a>
+        <div class="grid shrink-0 grid-cols-2 gap-8 sm:gap-10">
+          <nav aria-label="このサイト" class="space-y-2">
+            <p class="text-[11px] font-semibold tracking-wider text-slate-500">
+              このサイト
+            </p>
+            <ul class="space-y-1.5">
+              <li>
+                <a href="/data/" class="hover:text-alps-800 hover:underline">
+                  データ一覧
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/raichonomichi/matsumoto-opendata/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-alps-800 hover:underline"
+                >
+                  アイデア・要望 (Issues)
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <nav aria-label="関連リンク" class="space-y-2">
+            <p class="text-[11px] font-semibold tracking-wider text-slate-500">
+              関連リンク
+            </p>
+            <ul class="space-y-1.5">
+              <li>
+                <a
+                  href="https://raichonomichi.net/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-alps-800 hover:underline"
+                >
+                  雷鳥の道
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/raichonomichi/matsumoto-opendata"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-alps-800 hover:underline"
+                >
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://x.com/yytsuyuzaki"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-alps-800 hover:underline"
+                >
+                  運営者のX
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://muchuu.net/contact/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="hover:text-alps-800 hover:underline"
+                >
+                  お問い合わせ
+                </a>
+              </li>
+              <li>
+                <a href="/privacy/" class="hover:text-alps-800 hover:underline">
+                  プライバシーポリシー
+                </a>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </footer>

@@ -1,0 +1,14 @@
+{
+  "id": "nagano-mountain-grading",
+  "name": "信州 山のグレーディング一覧表",
+  "provider": "長野県・長野県山岳遭難防止対策協会",
+  "description": "長野県内の主要登山ルートについて、体力度（1〜10段階）と技術的難易度（A〜E段階）、コースタイム・距離・累積標高差・ルート定数を評価・公表した資料。",
+  "sourceUrl": "https://www.pref.nagano.lg.jp/kankoki/sangyo/kanko/gure-dexingu.html",
+  "license": "その他",
+  "licenseUrl": "https://www.pref.nagano.lg.jp/kankoki/sangyo/kanko/gure-dexingu.html",
+  "attribution": "長野県・長野県山岳遭難防止対策協会「信州 山のグレーディング一覧表（令和8年4月更新）」",
+  "format": ["PDF"],
+  "updateFrequency": "改定時",
+  "updatedAt": "2026-11-25",
+  "notes": "公式PDF（2026_grading_list.pdf）の公表値から松本市内山小屋に関連するルートの評価値を出典明記のうえ構造化しています。"
+}
