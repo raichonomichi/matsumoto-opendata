@@ -1,7 +1,7 @@
 {
   "id": "yamagoya",
-  "title": "ヤマゴヤ・レジストリ",
-  "summary": "北アルプス・乗鞍・美ヶ原の山小屋を、体力・難易度・標高・最寄りバスの時刻からまとめて比較・検索。登山計画の下調べに役立つ山小屋ガイドです。",
+  "title": "松本・北アルプス 山小屋さがし",
+  "summary": "初めての山小屋泊から縦走の下調べまで。北アルプス・乗鞍・美ヶ原の山小屋を、体力・難易度・標高・最寄りバス時刻からまとめて比較・検索できます。",
   "status": "published",
   "path": "/yamagoya/",
   "datasets": [
@@ -9,7 +9,7 @@
     "matsumoto-gtfs-jp",
     "nagano-mountain-grading"
   ],
-  "tags": ["山小屋", "北アルプス", "乗鞍", "美ヶ原", "GTFS"],
+  "tags": ["山小屋", "北アルプス", "乗鞍", "美ヶ原", "登山計画"],
   "publishedAt": "2026-11-25",
   "issueUrl": "https://github.com/raichonomichi/matsumoto-opendata/issues/1"
 }
