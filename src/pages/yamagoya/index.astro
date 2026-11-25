@@ -49,7 +49,7 @@ const difficultyDescriptions: Record<DifficultyGrade, string> = {
 
 <BaseLayout
   title="ヤマゴヤ・レジストリ"
-  description="松本市内の北アルプス・乗鞍・美ヶ原の山小屋について、旅館業営業許可台帳・信州山のグレーディング・最寄りバス停時刻を一覧検索できるデータベース。"
+  description="北アルプス・乗鞍・美ヶ原の山小屋を、体力・難易度・標高・最寄りバスの時刻からまとめて比較・検索できる登山計画サポートツール。松本市・長野県の公式公開データをもとに整理しています。"
   datasetIds={datasetIds}
 >
   <div class="space-y-8">
@@ -68,12 +68,12 @@ const difficultyDescriptions: Record<DifficultyGrade, string> = {
         ヤマゴヤ・レジストリ
       </h1>
       <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
-        松本市内の主要山岳エリア（北アルプス・乗鞍・美ヶ原）の山小屋を対象に、松本市保健所の旅館業営業許可台帳・長野県「信州 山のグレーディング」・松本市公式 GTFS-JP バス時刻を結合したデータベースです。
+        「自分の体力や経験に合う山小屋はどこ？」「下山後のバスに間に合う？」——北アルプス・乗鞍・美ヶ原の山小屋を、ルートの難易度・標高・定員・最寄りバス停の時刻までまとめて比較・検索できます。松本市や長野県の公式公開データをもとに整理しているため、登山計画の下調べに役立ちます。
       </p>
 
       <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
-          <p class="text-[11px] text-alps-200">収録山小屋</p>
+          <p class="text-[11px] text-alps-200">掲載中の山小屋</p>
           <p class="mt-0.5 text-xl font-bold">{dataset.count} 軒</p>
         </div>
         <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
@@ -81,7 +81,7 @@ const difficultyDescriptions: Record<DifficultyGrade, string> = {
           <p class="mt-0.5 text-xl font-bold">{yamagoyaAreas.length} 山域</p>
         </div>
         <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
-          <p class="text-[11px] text-alps-200">GTFS時刻結合</p>
+          <p class="text-[11px] text-alps-200">バス時刻を掲載</p>
           <p class="mt-0.5 text-xl font-bold">{gtfsStopCount} 停留所</p>
         </div>
       </div>
