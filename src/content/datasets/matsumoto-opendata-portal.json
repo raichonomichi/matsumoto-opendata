@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-opendata-portal",
+  "name": "松本市オープンデータ（公式ポータル）",
+  "provider": "松本市",
+  "description": "松本市が公開している各種オープンデータ（生活衛生施設、食品営業許可台帳、防災・避難所、観光・イベント等）の一次配布元です。",
+  "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/20/4058.html",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+  "attribution": "松本市オープンデータ（クリエイティブ・コモンズ・ライセンス 表示 4.0 国際）",
+  "format": ["CSV", "Excel", "PDF"],
+  "updateFrequency": "データセットごとに随時・四半期更新",
+  "updatedAt": "2026-11-25",
+  "notes": "一部ファイル（LinkData経由等）は CC BY 3.0 表記のものがあるため、個別データセットごとにライセンスを確認して利用します。"
+}

@@ -1,0 +1,66 @@
+---
+import { getCollection } from "astro:content";
+import type { DatasetMeta } from "@/lib/schemas";
+
+interface Props {
+  datasetIds?: string[];
+  datasets?: DatasetMeta[];
+}
+
+const { datasetIds = [], datasets: passedDatasets } = Astro.props;
+
+let resolvedDatasets: DatasetMeta[] = passedDatasets ?? [];
+if (!passedDatasets && datasetIds.length > 0) {
+  const all = await getCollection("datasets");
+  const byId = new Map(all.map((entry) => [entry.data.id, entry.data]));
+  resolvedDatasets = datasetIds
+    .map((id) => byId.get(id))
+    .filter((item): item is DatasetMeta => item !== undefined);
+}
+---
+
+{
+  resolvedDatasets.length > 0 && (
+    <section
+      aria-label="使用データ・出典"
+      class="rounded-xl border border-slate-200 bg-alps-50/70 p-5 text-sm text-slate-700"
+    >
+      <h2 class="mb-3 text-xs font-semibold tracking-wider text-alps-800 uppercase">
+        使用データ・出典・ライセンス
+      </h2>
+      <ul class="space-y-3">
+        {resolvedDatasets.map((ds) => (
+          <li class="border-l-2 border-alps-500 pl-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <a
+                href={ds.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-medium text-alps-900 underline decoration-alps-300 underline-offset-2 hover:text-alps-700"
+              >
+                {ds.name}
+              </a>
+              <a
+                href={ds.licenseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-xs font-medium text-alps-800 ring-1 ring-slate-200 hover:bg-alps-100"
+              >
+                {ds.license}
+              </a>
+              <span class="text-xs text-slate-500">
+                確認・更新日: {ds.updatedAt}
+              </span>
+              {ds.validUntil && (
+                <span class="text-xs text-slate-500">
+                  有効期限: {ds.validUntil}
+                </span>
+              )}
+            </div>
+            <p class="mt-1 text-xs text-slate-600">出典: {ds.attribution}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

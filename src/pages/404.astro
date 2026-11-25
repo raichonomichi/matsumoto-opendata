@@ -1,0 +1,23 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="ページが見つかりません">
+  <div class="mx-auto max-w-lg py-16 text-center">
+    <p class="font-mono text-sm font-semibold text-alps-700">404 Not Found</p>
+    <h1 class="mt-2 text-3xl font-bold text-slate-900">
+      ページが見つかりませんでした
+    </h1>
+    <p class="mt-3 text-sm text-slate-600">
+      URLが変更されたか、ページが削除された可能性があります。
+    </p>
+    <div class="mt-6">
+      <a
+        href="/"
+        class="inline-flex items-center rounded-xl bg-alps-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-alps-800"
+      >
+        トップページへ戻る
+      </a>
+    </div>
+  </div>
+</BaseLayout>

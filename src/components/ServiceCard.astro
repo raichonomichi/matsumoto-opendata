@@ -1,0 +1,41 @@
+---
+import type { ServiceMeta } from "@/lib/schemas";
+
+interface Props {
+  service: ServiceMeta;
+}
+
+const { service } = Astro.props;
+---
+
+<a
+  href={service.path}
+  class="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 transition hover:-translate-y-0.5 hover:border-alps-500 hover:shadow-md"
+>
+  <div>
+    <div class="flex items-center justify-between gap-2">
+      <h3 class="text-lg font-bold text-slate-900 group-hover:text-alps-700">
+        {service.title}
+      </h3>
+      {service.status === "beta" && (
+        <span class="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+          Beta
+        </span>
+      )}
+    </div>
+    <p class="mt-2 text-sm leading-relaxed text-slate-600">{service.summary}</p>
+  </div>
+
+  <div class="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4">
+    <div class="flex flex-wrap gap-1.5">
+      {service.tags.map((tag) => (
+        <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+          #{tag}
+        </span>
+      ))}
+    </div>
+    <span class="text-xs font-semibold text-alps-700 group-hover:translate-x-0.5 transition-transform">
+      開く →
+    </span>
+  </div>
+</a>
