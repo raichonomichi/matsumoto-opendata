@@ -47,7 +47,7 @@ const officialLinks = [
         1ページの小さなサービスに。
       </h1>
       <p class="mt-4 text-sm leading-relaxed text-alps-100 sm:text-base">
-        松本市や北アルプス地域にまつわる公開データを整備し、すぐに使える1ページ完結型のミニサービスと、再利用しやすい静的 JSON API として公開する実験場です。
+        松本市や北アルプス地域にまつわる公開データを整備し、すぐに使える1ページ完結型のミニサービスとして公開する実験場です。
       </p>
       <div class="mt-7 flex flex-wrap gap-3">
         <a
@@ -60,7 +60,7 @@ const officialLinks = [
           href="/data/"
           class="inline-flex items-center rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/20"
         >
-          データ・API を見る
+          データ一覧を見る
         </a>
       </div>
     </div>
@@ -98,7 +98,7 @@ const officialLinks = [
           現在、最初のサービスを準備中です
         </p>
         <p class="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-slate-600">
-          山小屋レジストリ、ごみ収集カレンダーのAPI化、防災カルテなどのアイデアを GitHub Issues で整理しながら順次実装を進めています。
+          山小屋レジストリ、ごみ収集カレンダー、防災カルテなどのアイデアを GitHub Issues で整理しながら順次実装を進めています。
         </p>
         <div class="mt-5">
           <a
@@ -148,7 +148,7 @@ const officialLinks = [
         <span class="font-semibold text-alps-900">ライセンス表記の方針:</span>
         本サイトでは、利用するデータセットごとに配布元・ライセンス（CC BY 4.0 / CC BY 3.0 / 政府標準利用規約 2.0 等）・確認日をメタデータとして一元管理し、各サービスページのフッターおよび
         <a href="/data/" class="font-medium text-alps-800 underline underline-offset-2">
-          データ・API一覧
+          データ一覧
         </a>
         に明記します。
       </div>
@@ -159,10 +159,10 @@ const officialLinks = [
     <div class="flex flex-col items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 sm:flex-row sm:items-center sm:p-8">
       <div>
         <h2 class="text-lg font-bold text-slate-900">
-          データカタログ・静的 JSON API
+          データカタログ（使用データ一覧）
         </h2>
         <p class="mt-1 text-sm text-slate-600">
-          現在 {datasets.length} 件のデータソースをカタログ登録済み。CORS 許可済みの静的 JSON として順次公開していきます。
+          現在 {datasets.length} 件のデータソースを登録済み。各サービスで利用しているオープンデータの出典・ライセンス・更新状況を確認できます。
         </p>
       </div>
       <div class="flex shrink-0 flex-wrap gap-2">
@@ -170,13 +170,7 @@ const officialLinks = [
           href="/data/"
           class="rounded-xl bg-alps-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-alps-800"
         >
-          データ・API一覧へ
-        </a>
-        <a
-          href="/api/v1/catalog.json"
-          class="rounded-xl border border-slate-300 bg-white px-4 py-2 font-mono text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
-        >
-          /api/v1/catalog.json
+          データ一覧へ
         </a>
       </div>
     </div>

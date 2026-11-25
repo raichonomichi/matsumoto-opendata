@@ -11,7 +11,7 @@ interface Props {
 
 const {
   title,
-  description = "松本市オープンデータを活用した1ページ完結のミニサービスと整形済みデータセットの公開サイト。",
+  description = "松本市オープンデータを活用した、すぐに使える1ページ完結型のミニサービス公開サイト。",
   datasetIds = [],
   ogType = "website",
 } = Astro.props;
@@ -23,7 +23,7 @@ const currentPath = Astro.url.pathname;
 
 const navItems = [
   { href: "/", label: "トップ" },
-  { href: "/data/", label: "データ・API" },
+  { href: "/data/", label: "データ一覧" },
 ];
 ---
 
@@ -113,7 +113,7 @@ const navItems = [
         </div>
         <div class="flex shrink-0 items-center gap-4">
           <a href="/data/" class="hover:text-alps-800 hover:underline">
-            データ・API一覧
+            データ一覧
           </a>
           <a
             href="https://github.com/raichonomichi/matsumoto-opendata/issues"

@@ -9,14 +9,13 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "pnpm pipeline:catalog && astro build",
+    "build": "astro build",
     "preview": "wrangler dev",
     "check": "astro check",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pipeline:catalog": "tsx pipelines/build-catalog.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {

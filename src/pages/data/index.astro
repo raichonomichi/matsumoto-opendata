@@ -8,41 +8,20 @@ const datasets = (await getCollection("datasets"))
 ---
 
 <BaseLayout
-  title="データ・API一覧"
-  description="松本市オープンデータ活用サイトで参照・整備しているデータセット一覧と、静的 JSON API の利用ガイド。"
+  title="データ一覧"
+  description="松本市オープンデータ活用サイトの各サービスで参照・整備しているオープンデータセットの出典・ライセンス・更新状況一覧。"
 >
   <div class="space-y-12">
     <section>
       <p class="font-mono text-xs font-semibold tracking-wider text-alps-700 uppercase">
-        Data Catalog & Static JSON API
+        Data Catalog
       </p>
       <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-        データ・API一覧
+        データ一覧
       </h1>
       <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600">
-        本サイトで利用するオープンデータの出典・ライセンス・更新状況を一覧化しています。加工・正規化したデータセットは、他の開発者もそのまま利用できるよう
-        <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-alps-900">/api/v1/</code>
-        配下で静的 JSON として公開します。
+        本サイトの各サービスで利用するオープンデータの出典・ライセンス・更新状況を一覧化しています。なお、本サイトは1ページ完結型のミニサービス提供に特化しており、JSON API としてのデータ公開は非対応です。元データの取得は各一次配布元をご利用ください。
       </p>
-    </section>
-
-    <section class="rounded-2xl border border-slate-200 bg-alps-50/60 p-6">
-      <h2 class="text-lg font-bold text-slate-900">静的 JSON API の利用方法</h2>
-      <ul class="mt-3 list-disc space-y-1.5 pl-5 text-sm text-slate-700">
-        <li>
-          エンドポイントは <code class="font-mono text-xs">https://modata.raichonomichi.net/api/v1/...</code> 配下に配置されます。
-        </li>
-        <li>
-          CORS（<code class="font-mono text-xs">Access-Control-Allow-Origin: *</code>）を許可しているため、ブラウザから直接 <code class="font-mono text-xs">fetch</code> 可能です。
-        </li>
-        <li>
-          二次利用時は、各データセットに記載されたライセンスおよび出典表記を遵守してください。
-        </li>
-      </ul>
-
-      <div class="mt-4 overflow-x-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-slate-100">
-        <pre><code>curl -s https://modata.raichonomichi.net/api/v1/catalog.json | jq .</code></pre>
-      </div>
     </section>
 
     <section>
@@ -100,14 +79,6 @@ const datasets = (await getCollection("datasets"))
               >
                 一次配布元を見る ↗
               </a>
-              {ds.apiPath && (
-                <a
-                  href={ds.apiPath}
-                  class="rounded-md bg-slate-100 px-2.5 py-1 font-mono text-slate-800 hover:bg-alps-100 hover:text-alps-900"
-                >
-                  API: {ds.apiPath}
-                </a>
-              )}
             </div>
 
             <p class="mt-3 text-xs text-slate-500">出典表記: {ds.attribution}</p>

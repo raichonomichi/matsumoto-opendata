@@ -1,6 +1,6 @@
 # matsumoto-opendata
 
-松本市オープンデータを活用した1ページ完結のミニサービスと、整形済みデータセット（静的 JSON API）を公開するサイトです。
+松本市オープンデータを活用した、すぐに使える1ページ完結型のミニサービスを公開するサイトです（JSON API としての公開は非対応）。
 
 - 公開URL（予定）: `https://modata.raichonomichi.net`
 - アイデア一覧: [GitHub Issues](https://github.com/raichonomichi/matsumoto-opendata/issues)
@@ -9,9 +9,8 @@
 
 - **フロントエンド**: Astro + TypeScript + Tailwind CSS v4（重いUI・地図・3Dはページ単位で独立導入）
 - **ホスティング**: Cloudflare Workers（Static Assets）＋ GitHub Actions 自動デプロイ
-  - 静的 JSON API は `public/api/v1/` に配置し、`public/_headers` で CORS を許可
-  - 動的検索が必要になった API だけ Workers 関数で拡張、大容量データ（3D Tiles 等）は必要時に Cloudflare R2 へ配置
-- **データパイプライン**: TypeScript (`tsx` + `zod`)（GIS/CityGML 等の特殊処理のみ必要時に Python 併用）
+  - 大容量データ（3D Tiles 等）は必要時に Cloudflare R2 へ配置
+- **データ整形**: TypeScript (`tsx` + `zod`)（GIS/CityGML 等の特殊処理のみ必要時に Python 併用）
 - **品質管理**: `pnpm` / Biome / Vitest / `astro check`
 
 ## ディレクトリ構成
@@ -26,12 +25,10 @@
 │   ├── lib/                 # 共通Zodスキーマ・ユーティリティ
 │   └── pages/
 │       ├── index.astro      # TOP（オープンデータ概要・公開サービス一覧）
-│       ├── data/            # データ・APIカタログ
+│       ├── data/            # データ一覧（出典・ライセンスカタログ）
 │       └── <service-slug>/  # 1ページ完結型ミニサービス
-├── pipelines/               # データ取得・正規化・カタログ生成スクリプト
 ├── public/
-│   ├── _headers             # セキュリティヘッダ・/api/v1/* の CORS 設定
-│   └── api/v1/              # 静的 JSON API 出力先
+│   └── _headers             # セキュリティヘッダ設定
 └── wrangler.jsonc           # Cloudflare Workers Static Assets 設定
 ```
 
@@ -48,7 +45,7 @@ pnpm dev
 pnpm lint     # Biome Lint / Format チェック
 pnpm check    # Astro / TypeScript 型チェック
 pnpm test     # Vitest（スキーマ・データ整合性テスト）
-pnpm build    # カタログ JSON 生成 + Astro ビルド
+pnpm build    # Astro ビルド
 pnpm preview  # Wrangler ローカルプレビュー
 ```
 

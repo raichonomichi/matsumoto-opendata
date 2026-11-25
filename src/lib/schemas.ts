@@ -27,13 +27,6 @@ export const datasetSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "validUntil must be YYYY-MM-DD")
     .optional(),
-  apiPath: z
-    .string()
-    .regex(
-      /^\/api\/v1\/.+\.json$/,
-      "apiPath must start with /api/v1/ and end with .json",
-    )
-    .optional(),
   notes: z.string().optional(),
 });
 
