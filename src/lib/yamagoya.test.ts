@@ -59,14 +59,21 @@ describe("GTFS-JP parsing & schedule extraction", () => {
         "23,平日,t1,川浦",
         "23,平日,t2,川浦",
         "23,平日,t3,新島々",
+        "23,平日,t4,終点降車専用",
       ].join("\n"),
       calendarCsv:
-        "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday\n平日,1,1,1,1,1,0,0",
+        "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date\n平日,1,1,1,1,1,0,0,20260801,20280331",
+      calendarDatesCsv: [
+        "service_id,date,exception_type",
+        "平日,20260811,2",
+        "平日,20261230,1",
+      ].join("\n"),
       stopTimesCsv: [
-        "trip_id,arrival_time,departure_time,stop_id",
-        "t1,13:53:00,13:53:00,227_01",
-        "t2,11:01:00,11:01:00,227_01",
-        "t3,06:57:00,06:57:00,227_02",
+        "trip_id,arrival_time,departure_time,stop_id,pickup_type,drop_off_type",
+        "t1,13:53:00,13:53:00,227_01,0,0",
+        "t2,11:01:00,11:01:00,227_01,0,0",
+        "t3,06:57:00,06:57:00,227_02,0,0",
+        "t4,18:38:00,18:38:00,227_01,1,0",
       ].join("\n"),
     });
 
@@ -74,10 +81,16 @@ describe("GTFS-JP parsing & schedule extraction", () => {
       "227_01",
       "227_02",
     ]);
+    // Drop-off-only (pickup_type=1) trip t4 must be excluded
     expect(schedules).toHaveLength(2);
+    expect(schedules.some((s) => s.headsign === "終点降車専用")).toBe(false);
     const kawaura = schedules.find((s) => s.headsign === "川浦");
     expect(kawaura).toMatchObject({
       daysLabel: "平日（月〜金）",
+      serviceStartDate: "2026-08-01",
+      serviceEndDate: "2028-03-31",
+      addedDates: ["2026-12-30"],
+      removedDates: ["2026-08-11"],
       tripCount: 2,
       firstDeparture: "11:01",
       lastDeparture: "13:53",
@@ -150,6 +163,23 @@ describe("public/api/v1/yamagoya.json integrity", () => {
       expect(parsed.huts[i - 1].elevationM).toBeGreaterThanOrEqual(
         parsed.huts[i].elevationM,
       );
+    }
+
+    // Drop-off-only stop (大和合 -> 大和合) must not appear as a departure
+    const ogatou = parsed.huts.find((h) => h.id === "ogatou-hotel");
+    const yamatoai = ogatou?.busAccess.find(
+      (b) => b.kind === "gtfs" && b.stopName === "大和合",
+    );
+    expect(yamatoai?.kind).toBe("gtfs");
+    if (yamatoai?.kind === "gtfs") {
+      expect(yamatoai.schedules.some((s) => s.headsign === "大和合")).toBe(
+        false,
+      );
+      expect(
+        yamatoai.schedules.some(
+          (s) => s.removedDates.length > 0 || s.addedDates.length > 0,
+        ),
+      ).toBe(true);
     }
   });
 });

@@ -32,10 +32,18 @@ export const timeHHMMSchema = z
   .string()
   .regex(/^\d{2}:\d{2}$/, "Time must be formatted as HH:MM");
 
+export const dateYMD = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD");
+
 export const gtfsServiceSummarySchema = z.object({
   serviceId: z.string().min(1),
   serviceLabel: z.string().min(1),
   daysLabel: z.string().min(1),
+  serviceStartDate: dateYMD.nullable(),
+  serviceEndDate: dateYMD.nullable(),
+  addedDates: z.array(dateYMD),
+  removedDates: z.array(dateYMD),
   headsign: z.string().min(1),
   tripCount: z.number().int().positive(),
   firstDeparture: timeHHMMSchema,

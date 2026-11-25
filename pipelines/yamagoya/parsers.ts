@@ -152,7 +152,13 @@ export interface GtfsFeedFiles {
   routesCsv: string;
   tripsCsv: string;
   calendarCsv: string;
+  calendarDatesCsv?: string;
   stopTimesCsv: string;
+}
+
+export interface GtfsCalendarExceptions {
+  addedDates: string[];
+  removedDates: string[];
 }
 
 export interface ParsedGtfsFeed {
@@ -163,6 +169,7 @@ export interface ParsedGtfsFeed {
   routesById: Map<string, string>;
   trips: Record<string, string>[];
   calendarById: Map<string, Record<string, string>>;
+  calendarExceptionsById: Map<string, GtfsCalendarExceptions>;
   stopTimes: Record<string, string>[];
 }
 
@@ -171,6 +178,9 @@ export function parseGtfsFeed(files: GtfsFeedFiles): ParsedGtfsFeed {
   const routes = parseGtfsCsv(files.routesCsv);
   const trips = parseGtfsCsv(files.tripsCsv);
   const calendar = parseGtfsCsv(files.calendarCsv);
+  const calendarDates = files.calendarDatesCsv
+    ? parseGtfsCsv(files.calendarDatesCsv)
+    : [];
   const stopTimes = parseGtfsCsv(files.stopTimesCsv);
 
   const routesById = new Map<string, string>();
@@ -184,6 +194,34 @@ export function parseGtfsFeed(files: GtfsFeedFiles): ParsedGtfsFeed {
     calendarById.set(c.service_id, c);
   }
 
+  const exceptionSets = new Map<
+    string,
+    { added: Set<string>; removed: Set<string> }
+  >();
+  for (const cd of calendarDates) {
+    const serviceId = cd.service_id;
+    const date = normalizeDate(cd.date);
+    if (!serviceId || !date) continue;
+    let entry = exceptionSets.get(serviceId);
+    if (!entry) {
+      entry = { added: new Set<string>(), removed: new Set<string>() };
+      exceptionSets.set(serviceId, entry);
+    }
+    if (cd.exception_type === "1") {
+      entry.added.add(date);
+    } else if (cd.exception_type === "2") {
+      entry.removed.add(date);
+    }
+  }
+
+  const calendarExceptionsById = new Map<string, GtfsCalendarExceptions>();
+  for (const [serviceId, sets] of exceptionSets) {
+    calendarExceptionsById.set(serviceId, {
+      addedDates: [...sets.added].sort(),
+      removedDates: [...sets.removed].sort(),
+    });
+  }
+
   return {
     feedId: files.feedId,
     version: feedInfo.feed_version || "unknown",
@@ -192,6 +230,7 @@ export function parseGtfsFeed(files: GtfsFeedFiles): ParsedGtfsFeed {
     routesById,
     trips,
     calendarById,
+    calendarExceptionsById,
     stopTimes,
   };
 }
@@ -217,13 +256,6 @@ function formatDaysLabel(cal: Record<string, string> | undefined): string {
   return active.join("・");
 }
 
-function normalizeServiceLabel(serviceId: string, daysLabel: string): string {
-  if (serviceId.includes("年末年始") && daysLabel === "土日") {
-    return "土日祝ダイヤ";
-  }
-  return serviceId;
-}
-
 export function extractGtfsStopSchedules(
   feed: ParsedGtfsFeed,
   routeId: string,
@@ -246,6 +278,8 @@ export function extractGtfsStopSchedules(
   >();
   for (const st of feed.stopTimes) {
     if (!stopSet.has(st.stop_id)) continue;
+    // GTFS pickup_type=1 means no pickup available (drop-off only / terminating stop)
+    if (st.pickup_type === "1") continue;
     const trip = tripsById.get(st.trip_id);
     if (!trip) continue;
     const hhmm = (st.departure_time || st.arrival_time || "").slice(0, 5);
@@ -267,11 +301,17 @@ export function extractGtfsStopSchedules(
   return [...grouped.values()]
     .map((entry) => {
       const departures = [...entry.times].sort();
-      const daysLabel = formatDaysLabel(feed.calendarById.get(entry.serviceId));
+      const cal = feed.calendarById.get(entry.serviceId);
+      const exceptions = feed.calendarExceptionsById.get(entry.serviceId);
+      const daysLabel = formatDaysLabel(cal);
       return {
         serviceId: entry.serviceId,
-        serviceLabel: normalizeServiceLabel(entry.serviceId, daysLabel),
+        serviceLabel: entry.serviceId,
         daysLabel,
+        serviceStartDate: normalizeDate(cal?.start_date),
+        serviceEndDate: normalizeDate(cal?.end_date),
+        addedDates: exceptions?.addedDates ?? [],
+        removedDates: exceptions?.removedDates ?? [],
         headsign: entry.headsign,
         tripCount: departures.length,
         firstDeparture: departures[0],

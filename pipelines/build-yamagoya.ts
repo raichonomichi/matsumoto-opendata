@@ -117,6 +117,7 @@ async function fetchGtfsFeed(
     routesCsv: required("routes.txt"),
     tripsCsv: required("trips.txt"),
     calendarCsv: required("calendar.txt"),
+    calendarDatesCsv: entries.get("calendar_dates.txt"),
     stopTimesCsv: required("stop_times.txt"),
   });
 }
