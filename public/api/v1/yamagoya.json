@@ -1,0 +1,1551 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-11-25",
+  "site": "https://modata.raichonomichi.net",
+  "count": 22,
+  "notice": "本データは松本市の旅館業営業許可台帳・長野県「信州 山のグレーディング」・松本市公式 GTFS-JP 等を結合した参考データベースです。予約・空き状況・最新の営業期間や料金は行政台帳に含まれないため、必ず各山小屋および交通事業者の公式サイトをご確認ください。",
+  "sources": {
+    "hotelRegistry": {
+      "name": "松本市の生活衛生施設データ（旅館業）",
+      "sourceUrl": "http://linkdata.org/work/rdf1s8757i",
+      "license": "CC BY 3.0",
+      "attribution": "松本市　DX推進本部（LinkData.org 公開データ）"
+    },
+    "gtfs": {
+      "name": "松本市 バス情報データ（GTFS-JP）",
+      "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/222/88191.html",
+      "license": "CC BY 4.0",
+      "feeds": [
+        {
+          "feedId": "guruttomatsumotobus1",
+          "version": "2026/08/01改正-見える化ver2.6d",
+          "validFrom": "2026-08-01",
+          "validUntil": "2028-03-31"
+        },
+        {
+          "feedId": "guruttomatsumotobus2",
+          "version": "2026/08/01改正-見える化ver2.6d",
+          "validFrom": "2026-08-01",
+          "validUntil": "2028-03-31"
+        }
+      ]
+    },
+    "mountainGrading": {
+      "name": "信州 山のグレーディング一覧表（長野県・長野県山岳遭難防止対策協会）",
+      "sourceUrl": "https://www.pref.nagano.lg.jp/kankoki/sangyo/kanko/gure-dexingu.html",
+      "pdfUrl": "https://www.pref.nagano.lg.jp/kankoki/sangyo/kanko/documents/2026_grading_list.pdf",
+      "updatedLabel": "令和8年4月更新"
+    }
+  },
+  "huts": [
+    {
+      "id": "kitahotaka-goya",
+      "sourceRecordId": "26",
+      "name": "北穂高小屋",
+      "registryName": "北穂高小屋",
+      "area": "北アルプス",
+      "subArea": "穂高連峰",
+      "elevationM": 3100,
+      "summary": "北穂高岳山頂直下（標高3,100m）に建つ日本最高所の山小屋。大キレットや涸沢岳方面への縦走拠点。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 20,
+        "capacity": 63,
+        "permittedAt": "1969-08-19",
+        "permitNumber": "第22-11号",
+        "operator": "株式会社北穂高小屋",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地北穂高"
+      },
+      "grading": [
+        {
+          "routeNumber": 17,
+          "routeName": "北穂高岳（上高地）＜涸沢＞",
+          "physicalLevel": 7,
+          "difficultyGrade": "D",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "北穂高岳",
+          "highestElevationM": 3106,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 16,
+          "distanceKm": 34.7,
+          "ascentKm": 1.97,
+          "descentKm": 1.97,
+          "routeConstant": 60.1
+        },
+        {
+          "routeNumber": 40,
+          "routeName": "周回・穂高縦走（上高地）＜北穂→前穂＞",
+          "physicalLevel": 7,
+          "difficultyGrade": "E",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "奥穂高岳",
+          "highestElevationM": 3190,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 19.2,
+          "distanceKm": 27.1,
+          "ascentKm": 2.37,
+          "descentKm": 2.37,
+          "routeConstant": 67.8
+        }
+      ],
+      "primaryPhysicalLevel": 7,
+      "primaryDifficultyGrade": "D",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "hutte-oyari",
+      "sourceRecordId": "17",
+      "name": "ヒュッテ大槍",
+      "registryName": "ヒュッテ　大槍",
+      "area": "北アルプス",
+      "subArea": "槍ヶ岳",
+      "elevationM": 2884,
+      "summary": "東鎌尾根上の槍ヶ岳を間近に望む山小屋。表銀座縦走や槍ヶ岳登頂の拠点として利用されます。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 4,
+        "capacity": 96,
+        "permittedAt": "1958-07-02",
+        "permitNumber": "第2-1号",
+        "operator": "（有）ヒュッテ大槍",
+        "postalCode": "390-1520",
+        "address": "松本市安曇上高地国有林槍ヶ岳"
+      },
+      "grading": [
+        {
+          "routeNumber": 44,
+          "routeName": "槍ヶ岳（上高地）",
+          "physicalLevel": 8,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 20,
+          "distanceKm": 39.1,
+          "ascentKm": 2.13,
+          "descentKm": 2.13,
+          "routeConstant": 70.3
+        },
+        {
+          "routeNumber": 5,
+          "routeName": "縦走・表銀座（中房温泉・上高地）",
+          "physicalLevel": 9,
+          "difficultyGrade": "C",
+          "startPoint": "燕岳登山口",
+          "startElevationM": 1455,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 25.3,
+          "distanceKm": 37.5,
+          "ascentKm": 3.07,
+          "descentKm": 3.02,
+          "routeConstant": 89.2
+        }
+      ],
+      "primaryPhysicalLevel": 8,
+      "primaryDifficultyGrade": "C",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "sessho-hutte",
+      "sourceRecordId": "175",
+      "name": "殺生ヒュッテ（殺生小屋）",
+      "registryName": "殺生小屋",
+      "area": "北アルプス",
+      "subArea": "槍ヶ岳",
+      "elevationM": 2870,
+      "summary": "槍沢から槍ヶ岳の肩へ登り上げる手前に位置する山小屋。台帳表記は「殺生小屋」。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 21,
+        "capacity": 161,
+        "permittedAt": "2004-11-26",
+        "permitNumber": "第1-9号",
+        "operator": "槍ヶ岳観光株式会社",
+        "postalCode": "390-1500",
+        "address": "松本市安曇4472（上高地国有林105ハ林小斑）"
+      },
+      "grading": [
+        {
+          "routeNumber": 44,
+          "routeName": "槍ヶ岳（上高地）",
+          "physicalLevel": 8,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 20,
+          "distanceKm": 39.1,
+          "ascentKm": 2.13,
+          "descentKm": 2.13,
+          "routeConstant": 70.3
+        }
+      ],
+      "primaryPhysicalLevel": 8,
+      "primaryDifficultyGrade": "C",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "kata-no-koya-norikura",
+      "sourceRecordId": "1",
+      "name": "乗鞍岳 肩の小屋",
+      "registryName": "肩の小屋",
+      "area": "乗鞍",
+      "subArea": "乗鞍岳",
+      "elevationM": 2766,
+      "summary": "乗鞍岳主峰・剣ヶ峰への登山道直下に位置する歴史ある山小屋（松本市台帳ID 1・1947年許可）。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 27,
+        "capacity": 147,
+        "permittedAt": "1947-08-14",
+        "permitNumber": "第909-4号",
+        "operator": null,
+        "postalCode": "390-1513",
+        "address": "松本市安曇前川国有林１４４"
+      },
+      "grading": [
+        {
+          "routeNumber": 34,
+          "routeName": "縦走・乗鞍岳（鈴蘭橋・畳平）",
+          "physicalLevel": 4,
+          "difficultyGrade": "B",
+          "startPoint": "鈴蘭橋",
+          "startElevationM": 1570,
+          "highestPoint": "剣ヶ峰",
+          "highestElevationM": 3025,
+          "endPoint": "畳平",
+          "endElevationM": 2700,
+          "courseTimeHours": 7,
+          "distanceKm": 10.8,
+          "ascentKm": 1.52,
+          "descentKm": 0.39,
+          "routeConstant": 31.2
+        }
+      ],
+      "primaryPhysicalLevel": 4,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "乗鞍山頂（畳平）・位ヶ原山荘・冷泉小屋",
+          "routeName": "乗鞍高原〜乗鞍山頂（畳平）シャトルバス（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "新島々から乗鞍高原観光センター経由で乗鞍エコーライン方面シャトルバスを利用。夏季・秋季の季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "hutte-nishidake",
+      "sourceRecordId": "24",
+      "name": "ヒュッテ西岳",
+      "registryName": "ヒュッテ西岳",
+      "area": "北アルプス",
+      "subArea": "槍ヶ岳・表銀座",
+      "elevationM": 2670,
+      "summary": "表銀座縦走路の西岳直下に位置し、槍・穂高連峰の大展望を望む山小屋。水俣乗越を経て東鎌尾根へ接続。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 10,
+        "capacity": 89,
+        "permittedAt": "1966-08-29",
+        "permitNumber": "第38-5号",
+        "operator": "株式会社燕山荘",
+        "postalCode": "390-1516",
+        "address": "松本市安曇西岳"
+      },
+      "grading": [
+        {
+          "routeNumber": 5,
+          "routeName": "縦走・表銀座（中房温泉・上高地）",
+          "physicalLevel": 9,
+          "difficultyGrade": "C",
+          "startPoint": "燕岳登山口",
+          "startElevationM": 1455,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 25.3,
+          "distanceKm": 37.5,
+          "ascentKm": 3.07,
+          "descentKm": 3.02,
+          "routeConstant": 89.2
+        }
+      ],
+      "primaryPhysicalLevel": 9,
+      "primaryDifficultyGrade": "C",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "daitensho-hutte",
+      "sourceRecordId": "31",
+      "name": "大天井ヒュッテ",
+      "registryName": "大天井ヒュッテ",
+      "area": "北アルプス",
+      "subArea": "槍ヶ岳・表銀座",
+      "elevationM": 2650,
+      "summary": "表銀座縦走路・牛首展望台付近に位置する山小屋。大天井岳のトラバースルート上に建ちます。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 15,
+        "capacity": 66,
+        "permittedAt": "1971-08-17",
+        "permitNumber": "第22-5号",
+        "operator": "（有）大天井ヒュッテ",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地国有林"
+      },
+      "grading": [
+        {
+          "routeNumber": 5,
+          "routeName": "縦走・表銀座（中房温泉・上高地）",
+          "physicalLevel": 9,
+          "difficultyGrade": "C",
+          "startPoint": "燕岳登山口",
+          "startElevationM": 1455,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 25.3,
+          "distanceKm": 37.5,
+          "ascentKm": 3.07,
+          "descentKm": 3.02,
+          "routeConstant": 89.2
+        }
+      ],
+      "primaryPhysicalLevel": 9,
+      "primaryDifficultyGrade": "C",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "otaki-sanso",
+      "sourceRecordId": "152",
+      "name": "大滝山荘",
+      "registryName": "大滝山荘",
+      "area": "北アルプス",
+      "subArea": "常念山脈",
+      "elevationM": 2616,
+      "summary": "蝶ヶ岳と鍋冠山を結ぶ静かな稜線・大滝山直下に建つ山小屋。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 4,
+        "capacity": 30,
+        "permittedAt": "1998-07-31",
+        "permitNumber": "第1-8号",
+        "operator": "有限会社蝶ヶ岳ヒュッテ",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地国有林大滝山"
+      },
+      "grading": [
+        {
+          "routeNumber": 27,
+          "routeName": "縦走・蝶ヶ岳・常念（上高地・一ノ沢）＜長塀尾根＞",
+          "physicalLevel": 6,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "常念岳",
+          "highestElevationM": 2857,
+          "endPoint": "一ノ沢",
+          "endElevationM": 1329,
+          "courseTimeHours": 15,
+          "distanceKm": 22.8,
+          "ascentKm": 1.9,
+          "descentKm": 2.07,
+          "routeConstant": 54
+        }
+      ],
+      "primaryPhysicalLevel": 6,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "jonen-goya",
+      "sourceRecordId": "197",
+      "name": "常念小屋",
+      "registryName": "常念小屋",
+      "area": "北アルプス",
+      "subArea": "常念山脈",
+      "elevationM": 2450,
+      "summary": "常念乗越に建ち、正面に槍ヶ岳・穂高連峰を一望できる常念山脈の拠点山小屋。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 24,
+        "capacity": 186,
+        "permittedAt": "2009-05-11",
+        "permitNumber": "第37-3号",
+        "operator": "（有）日本アルプス常念小屋",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地常念岳"
+      },
+      "grading": [
+        {
+          "routeNumber": 21,
+          "routeName": "常念岳（一ノ沢）",
+          "physicalLevel": 4,
+          "difficultyGrade": "B",
+          "startPoint": "一ノ沢",
+          "startElevationM": 1329,
+          "highestPoint": "常念岳",
+          "highestElevationM": 2857,
+          "endPoint": "一ノ沢",
+          "endElevationM": 1329,
+          "courseTimeHours": 10,
+          "distanceKm": 12.1,
+          "ascentKm": 1.53,
+          "descentKm": 1.53,
+          "routeConstant": 37.9
+        },
+        {
+          "routeNumber": 27,
+          "routeName": "縦走・蝶ヶ岳・常念（上高地・一ノ沢）＜長塀尾根＞",
+          "physicalLevel": 6,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "常念岳",
+          "highestElevationM": 2857,
+          "endPoint": "一ノ沢",
+          "endElevationM": 1329,
+          "courseTimeHours": 15,
+          "distanceKm": 22.8,
+          "ascentKm": 1.9,
+          "descentKm": 2.07,
+          "routeConstant": 54
+        }
+      ],
+      "primaryPhysicalLevel": 4,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "karasawa-goya",
+      "sourceRecordId": "95",
+      "name": "涸沢小屋",
+      "registryName": "涸沢小屋",
+      "area": "北アルプス",
+      "subArea": "涸沢・穂高連峰",
+      "elevationM": 2350,
+      "summary": "涸沢カールの高台に建つ山小屋。北穂高岳・奥穂高岳への登山拠点として親しまれています。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 12,
+        "capacity": 78,
+        "permittedAt": "1989-12-26",
+        "permitNumber": "第30-13号",
+        "operator": "有限会社涸沢小屋",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地涸沢"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 17,
+          "routeName": "北穂高岳（上高地）＜涸沢＞",
+          "physicalLevel": 7,
+          "difficultyGrade": "D",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "北穂高岳",
+          "highestElevationM": 3106,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 16,
+          "distanceKm": 34.7,
+          "ascentKm": 1.97,
+          "descentKm": 1.97,
+          "routeConstant": 60.1
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "kuraigahara-sanso",
+      "sourceRecordId": "28",
+      "name": "位ヶ原山荘",
+      "registryName": "位ヶ原山荘",
+      "area": "乗鞍",
+      "subArea": "乗鞍岳",
+      "elevationM": 2350,
+      "summary": "乗鞍エコーライン沿い、標高2,350mの位ヶ原に位置する山小屋。乗鞍岳登山や春山スキーの拠点。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 8,
+        "capacity": 44,
+        "permittedAt": "1970-12-28",
+        "permitNumber": "第22-14号",
+        "operator": null,
+        "postalCode": "390-1513",
+        "address": "松本市安曇前川国有林１４３"
+      },
+      "grading": [
+        {
+          "routeNumber": 34,
+          "routeName": "縦走・乗鞍岳（鈴蘭橋・畳平）",
+          "physicalLevel": 4,
+          "difficultyGrade": "B",
+          "startPoint": "鈴蘭橋",
+          "startElevationM": 1570,
+          "highestPoint": "剣ヶ峰",
+          "highestElevationM": 3025,
+          "endPoint": "畳平",
+          "endElevationM": 2700,
+          "courseTimeHours": 7,
+          "distanceKm": 10.8,
+          "ascentKm": 1.52,
+          "descentKm": 0.39,
+          "routeConstant": 31.2
+        }
+      ],
+      "primaryPhysicalLevel": 4,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "乗鞍山頂（畳平）・位ヶ原山荘・冷泉小屋",
+          "routeName": "乗鞍高原〜乗鞍山頂（畳平）シャトルバス（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "新島々から乗鞍高原観光センター経由で乗鞍エコーライン方面シャトルバスを利用。夏季・秋季の季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "karasawa-hutte",
+      "sourceRecordId": "22",
+      "name": "涸沢ヒュッテ",
+      "registryName": "涸沢ヒュッテ",
+      "area": "北アルプス",
+      "subArea": "涸沢・穂高連峰",
+      "elevationM": 2310,
+      "summary": "涸沢カールのモレーン上に建つ大型山小屋。紅葉シーズンをはじめ穂高連峰登山の中心拠点。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 38,
+        "capacity": 187,
+        "permittedAt": "1964-08-03",
+        "permitNumber": "第18号",
+        "operator": "株式会社涸沢ヒュッテ",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地4469-1"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 4,
+          "routeName": "奥穂高岳（上高地）＜涸沢＞",
+          "physicalLevel": 7,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "奥穂高岳",
+          "highestElevationM": 3190,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 17.7,
+          "distanceKm": 36.6,
+          "ascentKm": 2.08,
+          "descentKm": 2.08,
+          "routeConstant": 64.8
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "dakesawa-goya",
+      "sourceRecordId": "227",
+      "name": "岳沢小屋",
+      "registryName": "岳沢小屋",
+      "area": "北アルプス",
+      "subArea": "穂高連峰",
+      "elevationM": 2170,
+      "summary": "上高地から重太郎新道を経て前穂高岳・奥穂高岳を目指す登山者の拠点となる山小屋。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 7,
+        "capacity": 58,
+        "permittedAt": "2015-10-15",
+        "permitNumber": "第37-45号",
+        "operator": "有限会社槍沢小屋",
+        "postalCode": "390-1516",
+        "address": "松本市安曇4469-1"
+      },
+      "grading": [
+        {
+          "routeNumber": 41,
+          "routeName": "前穂高岳（上高地）＜重太郎新道＞",
+          "physicalLevel": 4,
+          "difficultyGrade": "D",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "前穂高岳",
+          "highestElevationM": 3090,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 10.3,
+          "distanceKm": 12.5,
+          "ascentKm": 1.62,
+          "descentKm": 1.62,
+          "routeConstant": 39.5
+        }
+      ],
+      "primaryPhysicalLevel": 4,
+      "primaryDifficultyGrade": "D",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "reisen-goya",
+      "sourceRecordId": "286",
+      "name": "冷泉小屋",
+      "registryName": "冷泉小屋",
+      "area": "乗鞍",
+      "subArea": "乗鞍岳",
+      "elevationM": 2160,
+      "summary": "乗鞍エコーライン沿い・冷泉沢付近に位置する山岳宿。乗鞍岳の登山・自然散策の拠点。",
+      "permit": {
+        "category": "旅館・ホテル",
+        "rooms": 4,
+        "capacity": 11,
+        "permittedAt": "2022-07-21",
+        "permitNumber": "第22-004号",
+        "operator": "株式会社REISEN",
+        "postalCode": "390-1520",
+        "address": "松本市安曇4308番地"
+      },
+      "grading": [
+        {
+          "routeNumber": 34,
+          "routeName": "縦走・乗鞍岳（鈴蘭橋・畳平）",
+          "physicalLevel": 4,
+          "difficultyGrade": "B",
+          "startPoint": "鈴蘭橋",
+          "startElevationM": 1570,
+          "highestPoint": "剣ヶ峰",
+          "highestElevationM": 3025,
+          "endPoint": "畳平",
+          "endElevationM": 2700,
+          "courseTimeHours": 7,
+          "distanceKm": 10.8,
+          "ascentKm": 1.52,
+          "descentKm": 0.39,
+          "routeConstant": 31.2
+        }
+      ],
+      "primaryPhysicalLevel": 4,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "乗鞍山頂（畳平）・位ヶ原山荘・冷泉小屋",
+          "routeName": "乗鞍高原〜乗鞍山頂（畳平）シャトルバス（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "新島々から乗鞍高原観光センター経由で乗鞍エコーライン方面シャトルバスを利用。夏季・秋季の季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "tokugotoge-goya",
+      "sourceRecordId": "202",
+      "name": "徳本峠小屋",
+      "registryName": "徳本峠小屋",
+      "area": "北アルプス",
+      "subArea": "上高地・霞沢岳",
+      "elevationM": 2135,
+      "summary": "島々谷と上高地を結ぶクラシックルート・徳本峠に建つ歴史的な山小屋。霞沢岳登山の拠点。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 2,
+        "capacity": 24,
+        "permittedAt": "2010-07-29",
+        "permitNumber": "第37-8号",
+        "operator": null,
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地島々谷３２　い林小班"
+      },
+      "grading": [
+        {
+          "routeNumber": 12,
+          "routeName": "霞沢岳（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "霞沢岳",
+          "highestElevationM": 2645,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 13.1,
+          "distanceKm": 23.1,
+          "ascentKm": 1.81,
+          "descentKm": 1.81,
+          "routeConstant": 49.7
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "C",
+      "busAccess": [
+        {
+          "kind": "gtfs",
+          "stopName": "島々徳本峠入口",
+          "stopIds": [
+            "227_01",
+            "227_02"
+          ],
+          "routeId": "23",
+          "routeName": "奈川・安曇線",
+          "feedId": "guruttomatsumotobus2",
+          "operator": "松本市（ぐるっとまつもとバス）",
+          "accessNote": "クラシックルート（島々谷）からの徳本峠登山口最寄りバス停。松本市公式 GTFS-JP（地域連携バス・奈川・安曇線）の時刻データを結合しています。",
+          "validFrom": "2026-08-01",
+          "validUntil": "2028-03-31",
+          "schedules": [
+            {
+              "serviceId": "平日（奈川）",
+              "serviceLabel": "平日（奈川）",
+              "daysLabel": "平日（月〜金）",
+              "headsign": "松本市立病院",
+              "tripCount": 2,
+              "firstDeparture": "08:52",
+              "lastDeparture": "12:31",
+              "departures": [
+                "08:52",
+                "12:31"
+              ]
+            },
+            {
+              "serviceId": "平日（奈川）",
+              "serviceLabel": "平日（奈川）",
+              "daysLabel": "平日（月〜金）",
+              "headsign": "新島々",
+              "tripCount": 1,
+              "firstDeparture": "06:57",
+              "lastDeparture": "06:57",
+              "departures": [
+                "06:57"
+              ]
+            },
+            {
+              "serviceId": "平日（奈川）",
+              "serviceLabel": "平日（奈川）",
+              "daysLabel": "平日（月〜金）",
+              "headsign": "川浦",
+              "tripCount": 3,
+              "firstDeparture": "11:01",
+              "lastDeparture": "18:47",
+              "departures": [
+                "11:01",
+                "13:53",
+                "18:47"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "ogatou-hotel",
+      "sourceRecordId": "69",
+      "name": "王ケ頭ホテル",
+      "registryName": "王ケ頭ホテル",
+      "area": "美ヶ原",
+      "subArea": "美ヶ原高原",
+      "elevationM": 2034,
+      "summary": "美ヶ原の最高峰・王ヶ頭（標高2,034m）山頂に建つ雲上の山岳宿。北アルプスから富士山まで360度の展望。",
+      "permit": {
+        "category": "旅館",
+        "rooms": 45,
+        "capacity": 192,
+        "permittedAt": "1984-01-09",
+        "permitNumber": "第1-16号",
+        "operator": "（有）美ケ原高原荘",
+        "postalCode": "390-0222",
+        "address": "松本市入山辺美ケ原８９６４"
+      },
+      "grading": [
+        {
+          "routeNumber": 99,
+          "routeName": "周回・美ヶ原（三城牧場）＜ダテ河原→塩くれ場・広小場＞",
+          "physicalLevel": 2,
+          "difficultyGrade": "B",
+          "startPoint": "三城牧場",
+          "startElevationM": 1420,
+          "highestPoint": "王ケ頭",
+          "highestElevationM": 2034,
+          "endPoint": "三城牧場",
+          "endElevationM": 1420,
+          "courseTimeHours": 4.4,
+          "distanceKm": 8.3,
+          "ascentKm": 0.66,
+          "descentKm": 0.66,
+          "routeConstant": 17.5
+        }
+      ],
+      "primaryPhysicalLevel": 2,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "gtfs",
+          "stopName": "大和合",
+          "stopIds": [
+            "380_01"
+          ],
+          "routeId": "27",
+          "routeName": "入山辺線",
+          "feedId": "guruttomatsumotobus2",
+          "operator": "松本市（ぐるっとまつもとバス）",
+          "accessNote": "入山辺・三城牧場方面への路線バス終点。三城牧場・美ヶ原登山口方面へのアクセス拠点として松本市公式 GTFS-JP（入山辺線）の時刻データを結合しています。",
+          "validFrom": "2026-08-01",
+          "validUntil": "2028-03-31",
+          "schedules": [
+            {
+              "serviceId": "月・水・木（入山辺）",
+              "serviceLabel": "月・水・木（入山辺）",
+              "daysLabel": "月・水・木",
+              "headsign": "バスターミナル北",
+              "tripCount": 2,
+              "firstDeparture": "08:38",
+              "lastDeparture": "10:08",
+              "departures": [
+                "08:38",
+                "10:08"
+              ]
+            },
+            {
+              "serviceId": "月・水・木（入山辺）",
+              "serviceLabel": "月・水・木（入山辺）",
+              "daysLabel": "月・水・木",
+              "headsign": "牛立",
+              "tripCount": 3,
+              "firstDeparture": "12:02",
+              "lastDeparture": "17:12",
+              "departures": [
+                "12:02",
+                "13:32",
+                "17:12"
+              ]
+            },
+            {
+              "serviceId": "平日（入山辺）",
+              "serviceLabel": "平日（入山辺）",
+              "daysLabel": "平日（月〜金）",
+              "headsign": "バスターミナル北",
+              "tripCount": 1,
+              "firstDeparture": "07:10",
+              "lastDeparture": "07:10",
+              "departures": [
+                "07:10"
+              ]
+            },
+            {
+              "serviceId": "平日（入山辺）",
+              "serviceLabel": "平日（入山辺）",
+              "daysLabel": "平日（月〜金）",
+              "headsign": "大和合",
+              "tripCount": 1,
+              "firstDeparture": "18:38",
+              "lastDeparture": "18:38",
+              "departures": [
+                "18:38"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "gtfs",
+          "stopName": "美ヶ原温泉",
+          "stopIds": [
+            "300_01"
+          ],
+          "routeId": "14",
+          "routeName": "美ヶ原温泉線",
+          "feedId": "guruttomatsumotobus1",
+          "operator": "松本市（ぐるっとまつもとバス）",
+          "accessNote": "松本バスターミナルから美ヶ原方面の山麓拠点。松本市公式 GTFS-JP（美ヶ原温泉線）の時刻データを結合しています。",
+          "validFrom": "2026-08-01",
+          "validUntil": "2028-03-31",
+          "schedules": [
+            {
+              "serviceId": "年末年始フル",
+              "serviceLabel": "土日祝ダイヤ",
+              "daysLabel": "土日",
+              "headsign": "松本バスターミナル",
+              "tripCount": 29,
+              "firstDeparture": "06:49",
+              "lastDeparture": "21:04",
+              "departures": [
+                "06:49",
+                "07:34",
+                "08:04",
+                "08:34",
+                "09:07",
+                "09:37",
+                "10:07",
+                "10:37",
+                "11:07",
+                "11:37",
+                "12:07",
+                "12:37",
+                "13:07",
+                "13:37",
+                "14:07",
+                "14:40",
+                "15:10",
+                "15:40",
+                "16:10",
+                "16:40",
+                "17:10",
+                "17:40",
+                "18:10",
+                "18:40",
+                "19:10",
+                "19:37",
+                "20:04",
+                "20:34",
+                "21:04"
+              ]
+            },
+            {
+              "serviceId": "平日",
+              "serviceLabel": "平日",
+              "daysLabel": "平日（月〜金）",
+              "headsign": "松本バスターミナル",
+              "tripCount": 35,
+              "firstDeparture": "06:19",
+              "lastDeparture": "22:04",
+              "departures": [
+                "06:19",
+                "06:44",
+                "07:07",
+                "07:35",
+                "07:55",
+                "08:15",
+                "08:35",
+                "08:55",
+                "09:15",
+                "09:40",
+                "10:07",
+                "10:37",
+                "11:07",
+                "11:37",
+                "12:07",
+                "12:37",
+                "13:07",
+                "13:37",
+                "14:07",
+                "14:37",
+                "15:07",
+                "15:40",
+                "16:10",
+                "16:40",
+                "17:10",
+                "17:40",
+                "18:10",
+                "18:40",
+                "19:07",
+                "19:37",
+                "20:04",
+                "20:34",
+                "21:04",
+                "21:34",
+                "22:04"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yarisawa-lodge",
+      "sourceRecordId": "25",
+      "name": "槍沢ロッヂ",
+      "registryName": "槍沢ロッヂ",
+      "area": "北アルプス",
+      "subArea": "槍ヶ岳",
+      "elevationM": 1820,
+      "summary": "横尾から槍沢を詰める途中（標高1,820m）に位置する山小屋。槍ヶ岳登山の前泊・中継拠点。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 18,
+        "capacity": 151,
+        "permittedAt": "1968-08-06",
+        "permitNumber": "第23-10号",
+        "operator": "（有）槍沢小屋",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地国有林１８２い林小班"
+      },
+      "grading": [
+        {
+          "routeNumber": 44,
+          "routeName": "槍ヶ岳（上高地）",
+          "physicalLevel": 8,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 20,
+          "distanceKm": 39.1,
+          "ascentKm": 2.13,
+          "descentKm": 2.13,
+          "routeConstant": 70.3
+        }
+      ],
+      "primaryPhysicalLevel": 8,
+      "primaryDifficultyGrade": "C",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "yokoo-sanso",
+      "sourceRecordId": "150",
+      "name": "横尾山荘",
+      "registryName": "横尾山荘",
+      "area": "北アルプス",
+      "subArea": "上高地・横尾",
+      "elevationM": 1620,
+      "summary": "槍ヶ岳・涸沢・蝶ヶ岳への分岐点となる横尾に建つ大型山荘。本格的な登山の玄関口。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 30,
+        "capacity": 250,
+        "permittedAt": "1998-03-16",
+        "permitNumber": "第1-19号",
+        "operator": "（有）奥上高地横尾山荘",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 44,
+          "routeName": "槍ヶ岳（上高地）",
+          "physicalLevel": 8,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "槍ヶ岳",
+          "highestElevationM": 3180,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 20,
+          "distanceKm": 39.1,
+          "ascentKm": 2.13,
+          "descentKm": 2.13,
+          "routeConstant": 70.3
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "tokusawa-lodge",
+      "sourceRecordId": "55",
+      "name": "松本市営 徳沢ロッヂ",
+      "registryName": "松本市営　徳沢ロッヂ",
+      "area": "北アルプス",
+      "subArea": "上高地・徳沢",
+      "elevationM": 1562,
+      "summary": "上高地・徳沢に位置する松本市営の山小屋（旅館業許可）。蝶ヶ岳・涸沢・槍ヶ岳方面の拠点。",
+      "permit": {
+        "category": "旅館",
+        "rooms": 11,
+        "capacity": 59,
+        "permittedAt": "1979-07-19",
+        "permitNumber": "第57-3号",
+        "operator": "松本市長",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地４４７０"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 27,
+          "routeName": "縦走・蝶ヶ岳・常念（上高地・一ノ沢）＜長塀尾根＞",
+          "physicalLevel": 6,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "常念岳",
+          "highestElevationM": 2857,
+          "endPoint": "一ノ沢",
+          "endElevationM": 1329,
+          "courseTimeHours": 15,
+          "distanceKm": 22.8,
+          "ascentKm": 1.9,
+          "descentKm": 2.07,
+          "routeConstant": 54
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "tokusawaen",
+      "sourceRecordId": "139",
+      "name": "氷壁の宿 徳澤園",
+      "registryName": "徳澤園",
+      "area": "北アルプス",
+      "subArea": "上高地・徳沢",
+      "elevationM": 1562,
+      "summary": "上高地から徒歩約2時間の徳沢に佇む山岳宿。蝶ヶ岳長塀尾根や涸沢・槍ヶ岳方面への前泊拠点。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 20,
+        "capacity": 111,
+        "permittedAt": "1996-06-03",
+        "permitNumber": "第36-5号",
+        "operator": "有限会社徳澤園",
+        "postalCode": "390-1516",
+        "address": "松本市安曇4468"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 27,
+          "routeName": "縦走・蝶ヶ岳・常念（上高地・一ノ沢）＜長塀尾根＞",
+          "physicalLevel": 6,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "常念岳",
+          "highestElevationM": 2857,
+          "endPoint": "一ノ沢",
+          "endElevationM": 1329,
+          "courseTimeHours": 15,
+          "distanceKm": 22.8,
+          "ascentKm": 1.9,
+          "descentKm": 2.07,
+          "routeConstant": 54
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "myojinkan-kamikochi",
+      "sourceRecordId": "157",
+      "name": "明神館（上高地）",
+      "registryName": "明神館",
+      "area": "北アルプス",
+      "subArea": "上高地・明神",
+      "elevationM": 1530,
+      "summary": "明神岳を仰ぐ上高地・明神地区に建つ山岳宿。徳本峠・霞沢岳や徳沢・涸沢方面への拠点。",
+      "permit": {
+        "category": "旅館",
+        "rooms": 36,
+        "capacity": 134,
+        "permittedAt": "1999-07-23",
+        "permitNumber": "第1-5号",
+        "operator": "（有）明神館",
+        "postalCode": "390-1516",
+        "address": "松本市安曇４４６８"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 12,
+          "routeName": "霞沢岳（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "C",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "霞沢岳",
+          "highestElevationM": 2645,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 13.1,
+          "distanceKm": 23.1,
+          "ascentKm": 1.81,
+          "descentKm": 1.81,
+          "routeConstant": 49.7
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "kamonji-goya",
+      "sourceRecordId": "72",
+      "name": "嘉門次小屋",
+      "registryName": "嘉門次小屋",
+      "area": "北アルプス",
+      "subArea": "上高地・明神",
+      "elevationM": 1530,
+      "summary": "明神池のほとりに建つ上條嘉門次ゆかりの歴史的な山小屋。囲炉裏の岩魚焼きでも知られます。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 4,
+        "capacity": 30,
+        "permittedAt": "1984-12-05",
+        "permitNumber": "第29-20号",
+        "operator": "（有）嘉門次小屋",
+        "postalCode": "390-1516",
+        "address": "松本市安曇４４６９－１"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    },
+    {
+      "id": "kamikochi-alps-sanso",
+      "sourceRecordId": "212",
+      "name": "上高地アルプス山荘",
+      "registryName": "上高地アルプス山荘",
+      "area": "北アルプス",
+      "subArea": "上高地",
+      "elevationM": 1505,
+      "summary": "日本山岳ガイド協会が運営する上高地の登山拠点山荘。穂高・槍・西穂方面への前泊に利用されます。",
+      "permit": {
+        "category": "簡易宿所",
+        "rooms": 10,
+        "capacity": 42,
+        "permittedAt": "2013-07-01",
+        "permitNumber": "第37-11号",
+        "operator": "公益社団法人日本山岳ガイド協会",
+        "postalCode": "390-1516",
+        "address": "松本市安曇上高地４４６８"
+      },
+      "grading": [
+        {
+          "routeNumber": 13,
+          "routeName": "涸沢（上高地）",
+          "physicalLevel": 5,
+          "difficultyGrade": "B",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "涸沢",
+          "highestElevationM": 2250,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 11.3,
+          "distanceKm": 30.6,
+          "ascentKm": 1.17,
+          "descentKm": 1.17,
+          "routeConstant": 42
+        },
+        {
+          "routeNumber": 41,
+          "routeName": "前穂高岳（上高地）＜重太郎新道＞",
+          "physicalLevel": 4,
+          "difficultyGrade": "D",
+          "startPoint": "上高地",
+          "startElevationM": 1504,
+          "highestPoint": "前穂高岳",
+          "highestElevationM": 3090,
+          "endPoint": "上高地",
+          "endElevationM": 1504,
+          "courseTimeHours": 10.3,
+          "distanceKm": 12.5,
+          "ascentKm": 1.62,
+          "descentKm": 1.62,
+          "routeConstant": 39.5
+        }
+      ],
+      "primaryPhysicalLevel": 5,
+      "primaryDifficultyGrade": "B",
+      "busAccess": [
+        {
+          "kind": "external_timetable",
+          "stopName": "上高地バスターミナル",
+          "routeName": "松本・新島々〜上高地線（アルピコ交通）",
+          "operator": "アルピコ交通",
+          "timetableUrl": "https://www.alpico.co.jp/traffic/local/kamikochi/",
+          "accessNote": "松本駅（上高地線電車）または松本バスターミナルから新島々経由で上高地バスターミナル下車。季節運行のため公式時刻表をご確認ください。"
+        }
+      ]
+    }
+  ]
+}

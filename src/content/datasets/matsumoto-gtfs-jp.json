@@ -1,0 +1,15 @@
+{
+  "id": "matsumoto-gtfs-jp",
+  "name": "松本市 バス情報データ（GTFS-JP）",
+  "provider": "松本市（公共交通課）",
+  "description": "ぐるっとまつもとバス（松本駅・バスターミナル発着バス／地域連携バス）の路線・停留所・時刻表データ。GTFSデータリポジトリで公開。",
+  "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/222/88191.html",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+  "attribution": "松本市「バス情報データ（GTFS-JPデータ）」（GTFSデータリポジトリ公開 / クリエイティブ・コモンズ・ライセンス 表示 4.0 国際）",
+  "format": ["GTFS-JP (ZIP/CSV)"],
+  "updateFrequency": "ダイヤ改正時",
+  "updatedAt": "2026-11-25",
+  "validUntil": "2028-03-31",
+  "notes": "guruttomatsumotobus1（美ヶ原温泉線等）および guruttomatsumotobus2（奈川・安曇線・入山辺線等）を利用。上高地・乗鞍山頂シャトル等のアルピコ交通路線は本フィード対象外のため公式時刻表ページへ案内しています。"
+}
