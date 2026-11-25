@@ -1,0 +1,16 @@
+{
+  "id": "yamagoya",
+  "title": "ヤマゴヤ・レジストリ",
+  "summary": "北アルプス・乗鞍・美ヶ原の山小屋について、松本市の旅館業営業許可台帳・信州山のグレーディング・最寄りバス停時刻を一覧検索できるデータベース。",
+  "status": "published",
+  "path": "/yamagoya/",
+  "datasets": [
+    "matsumoto-ryokan-registry",
+    "matsumoto-gtfs-jp",
+    "nagano-mountain-grading",
+    "yamagoya-registry-api"
+  ],
+  "tags": ["山小屋", "北アルプス", "乗鞍", "美ヶ原", "GTFS"],
+  "publishedAt": "2026-11-25",
+  "issueUrl": "https://github.com/raichonomichi/matsumoto-opendata/issues/1"
+}

@@ -1,8 +1,25 @@
 {
   "version": "1.0",
   "site": "https://modata.raichonomichi.net",
-  "count": 1,
+  "count": 5,
   "datasets": [
+    {
+      "id": "matsumoto-gtfs-jp",
+      "name": "松本市 バス情報データ（GTFS-JP）",
+      "provider": "松本市（公共交通課）",
+      "description": "ぐるっとまつもとバス（松本駅・バスターミナル発着バス／地域連携バス）の路線・停留所・時刻表データ。GTFSデータリポジトリで公開。",
+      "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/222/88191.html",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+      "attribution": "松本市「バス情報データ（GTFS-JPデータ）」（GTFSデータリポジトリ公開 / クリエイティブ・コモンズ・ライセンス 表示 4.0 国際）",
+      "format": [
+        "GTFS-JP (ZIP/CSV)"
+      ],
+      "updateFrequency": "ダイヤ改正時",
+      "updatedAt": "2026-11-25",
+      "validUntil": "2028-03-31",
+      "notes": "guruttomatsumotobus1（美ヶ原温泉線等）および guruttomatsumotobus2（奈川・安曇線・入山辺線等）を利用。上高地・乗鞍山頂シャトル等のアルピコ交通路線は本フィード対象外のため公式時刻表ページへ案内しています。"
+    },
     {
       "id": "matsumoto-opendata-portal",
       "name": "松本市オープンデータ（公式ポータル）",
@@ -20,6 +37,57 @@
       "updateFrequency": "データセットごとに随時・四半期更新",
       "updatedAt": "2026-11-25",
       "notes": "一部ファイル（LinkData経由等）は CC BY 3.0 表記のものがあるため、個別データセットごとにライセンスを確認して利用します。"
+    },
+    {
+      "id": "matsumoto-ryokan-registry",
+      "name": "松本市の生活衛生施設データ（旅館業）",
+      "provider": "松本市（DX推進本部・食品・生活衛生課）",
+      "description": "松本市保健所が許可している旅館業法に基づく施設台帳（ホテル・旅館・簡易宿所）。施設名称・所在地・種別・室数・定員数・許可日・許可番号等を収録。",
+      "sourceUrl": "http://linkdata.org/work/rdf1s8757i",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+      "attribution": "松本市　DX推進本部「松本市の生活衛生施設データ（matsumoto_hotel）」（クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+      "format": [
+        "TSV",
+        "Excel",
+        "RDF/Turtle"
+      ],
+      "updateFrequency": "随時更新",
+      "updatedAt": "2026-11-25",
+      "notes": "松本市オープンデータ案内ページでは原則 CC BY 4.0 と案内されていますが、LinkData.org 配布ファイルヘッダの明記に従い CC BY 3.0 として登録しています。山小屋の抽出はキュレーション辞書によりノイズを除外しています。"
+    },
+    {
+      "id": "nagano-mountain-grading",
+      "name": "信州 山のグレーディング一覧表",
+      "provider": "長野県・長野県山岳遭難防止対策協会",
+      "description": "長野県内の主要登山ルートについて、体力度（1〜10段階）と技術的難易度（A〜E段階）、コースタイム・距離・累積標高差・ルート定数を評価・公表した資料。",
+      "sourceUrl": "https://www.pref.nagano.lg.jp/kankoki/sangyo/kanko/gure-dexingu.html",
+      "license": "その他",
+      "licenseUrl": "https://www.pref.nagano.lg.jp/kankoki/sangyo/kanko/gure-dexingu.html",
+      "attribution": "長野県・長野県山岳遭難防止対策協会「信州 山のグレーディング一覧表（令和8年4月更新）」",
+      "format": [
+        "PDF"
+      ],
+      "updateFrequency": "改定時",
+      "updatedAt": "2026-11-25",
+      "notes": "公式PDF（2026_grading_list.pdf）の公表値から松本市内山小屋に関連するルートの評価値を出典明記のうえ構造化しています。"
+    },
+    {
+      "id": "yamagoya-registry-api",
+      "name": "ヤマゴヤ・レジストリ 静的 JSON API",
+      "provider": "松本市オープンデータ活用サイト（独自整形）",
+      "description": "松本市内の主要山岳エリア（北アルプス・乗鞍・美ヶ原）の山小屋について、旅館業営業許可台帳・信州山のグレーディング・松本市GTFS-JP時刻データを結合した整形済みJSON。",
+      "sourceUrl": "https://modata.raichonomichi.net/yamagoya/",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+      "attribution": "松本市「生活衛生施設データ（旅館業）」「バス情報データ（GTFS-JP）」および長野県「信州 山のグレーディング」をもとに松本市オープンデータ活用サイトが加工・作成",
+      "format": [
+        "JSON"
+      ],
+      "updateFrequency": "元データ更新時に再生成",
+      "updatedAt": "2026-11-25",
+      "apiPath": "/api/v1/yamagoya.json",
+      "notes": "予約・空き状況・営業期間は含みません。二次利用時は元データ各出典のクレジット表記も併せてご確認ください。"
     }
   ]
 }

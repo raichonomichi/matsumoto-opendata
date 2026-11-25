@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "pipeline:catalog": "tsx pipelines/build-catalog.ts",
+    "pipeline:yamagoya": "tsx pipelines/build-yamagoya.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {

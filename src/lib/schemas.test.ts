@@ -37,6 +37,32 @@ describe("datasetSchema", () => {
 });
 
 describe("serviceSchema", () => {
+  it("validates all service manifests in src/content/services and checks dataset references", async () => {
+    const datasetDir = path.resolve("src/content/datasets");
+    const datasetFiles = (await readdir(datasetDir)).filter((f) =>
+      f.endsWith(".json"),
+    );
+    const datasetIds = new Set<string>();
+    for (const file of datasetFiles) {
+      const raw = await readFile(path.join(datasetDir, file), "utf-8");
+      datasetIds.add(datasetSchema.parse(JSON.parse(raw)).id);
+    }
+
+    const serviceDir = path.resolve("src/content/services");
+    const serviceFiles = (await readdir(serviceDir)).filter((f) =>
+      f.endsWith(".json"),
+    );
+    expect(serviceFiles.length).toBeGreaterThan(0);
+
+    for (const file of serviceFiles) {
+      const raw = await readFile(path.join(serviceDir, file), "utf-8");
+      const parsed = serviceSchema.parse(JSON.parse(raw));
+      for (const dsId of parsed.datasets) {
+        expect(datasetIds.has(dsId)).toBe(true);
+      }
+    }
+  });
+
   it("validates a service manifest and rejects invalid paths", () => {
     const valid = serviceSchema.safeParse({
       id: "yamagoya-registry",

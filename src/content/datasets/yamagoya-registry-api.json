@@ -1,0 +1,15 @@
+{
+  "id": "yamagoya-registry-api",
+  "name": "ヤマゴヤ・レジストリ 静的 JSON API",
+  "provider": "松本市オープンデータ活用サイト（独自整形）",
+  "description": "松本市内の主要山岳エリア（北アルプス・乗鞍・美ヶ原）の山小屋について、旅館業営業許可台帳・信州山のグレーディング・松本市GTFS-JP時刻データを結合した整形済みJSON。",
+  "sourceUrl": "https://modata.raichonomichi.net/yamagoya/",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市「生活衛生施設データ（旅館業）」「バス情報データ（GTFS-JP）」および長野県「信州 山のグレーディング」をもとに松本市オープンデータ活用サイトが加工・作成",
+  "format": ["JSON"],
+  "updateFrequency": "元データ更新時に再生成",
+  "updatedAt": "2026-11-25",
+  "apiPath": "/api/v1/yamagoya.json",
+  "notes": "予約・空き状況・営業期間は含みません。二次利用時は元データ各出典のクレジット表記も併せてご確認ください。"
+}

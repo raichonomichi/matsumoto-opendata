@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-ryokan-registry",
+  "name": "松本市の生活衛生施設データ（旅館業）",
+  "provider": "松本市（DX推進本部・食品・生活衛生課）",
+  "description": "松本市保健所が許可している旅館業法に基づく施設台帳（ホテル・旅館・簡易宿所）。施設名称・所在地・種別・室数・定員数・許可日・許可番号等を収録。",
+  "sourceUrl": "http://linkdata.org/work/rdf1s8757i",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市　DX推進本部「松本市の生活衛生施設データ（matsumoto_hotel）」（クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+  "format": ["TSV", "Excel", "RDF/Turtle"],
+  "updateFrequency": "随時更新",
+  "updatedAt": "2026-11-25",
+  "notes": "松本市オープンデータ案内ページでは原則 CC BY 4.0 と案内されていますが、LinkData.org 配布ファイルヘッダの明記に従い CC BY 3.0 として登録しています。山小屋の抽出はキュレーション辞書によりノイズを除外しています。"
+}
