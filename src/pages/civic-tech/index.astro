@@ -1,0 +1,181 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+const features = [
+  {
+    number: "01",
+    title: "「行政まかせ」にしない市民主体",
+    description:
+      "地域に暮らすエンジニア・デザイナー・住民などが、日々の暮らしの中にある「こんなのがあったら便利なのに」という身近な課題から出発し、自分たちの手でツールやサービスを作ります。",
+  },
+  {
+    number: "02",
+    title: "オープンデータを「使える形」へ",
+    description:
+      "自治体が公開するCSVやPDFのデータは、そのままでは一般の人に扱いづらいことも多くあります。シビックテックは、そのデータを検索ツールや一覧など誰でもすぐ使える形へ翻訳・加工します。",
+  },
+  {
+    number: "03",
+    title: "小さく作って公開し、育てる",
+    description:
+      "大規模な予算や長い開発期間を待たず、まず動く小さなツールを公開して利用者の反応や要望を取り入れながら改善します。仕組みやコードを公開し、他地域でも応用できるオープンさも特徴です。",
+  },
+] as const;
+
+const examples = [
+  {
+    name: "5374（ゴミナシ）.jp",
+    summary:
+      "自治体の分かりづらいごみ収集カレンダーを、スマートフォンで「今日出せるごみ」がひと目で分かるWebアプリにした金沢市発の取り組み。オープンソースとして全国多数の地域へ広がりました。",
+  },
+  {
+    name: "新型コロナウイルス感染症対策サイト",
+    summary:
+      "行政のオープンデータをもとに、市民エンジニアが協働してグラフやダッシュボードを開発・公開。仕組みがオープンだったことで、全国の自治体版サイトへ短期間で横展開されました。",
+  },
+  {
+    name: "地域の暮らしマップ群",
+    summary:
+      "避難所・AED・保育園・除雪状況など、自治体が保有する台帳データを地図や検索一覧に整理し、子育て世帯や住民が直感的に調べられるようにした身近な地域ツール群です。",
+  },
+] as const;
+---
+
+<BaseLayout
+  title="Civic Tech（シビックテック）とは"
+  description="Civic Tech（シビックテック）の概念、オープンデータやGovTechとの違い、身近な事例、松本市オープンデータ活用サイトでの実践について解説します。"
+>
+  <article class="space-y-12">
+    <header>
+      <p class="font-mono text-xs font-semibold tracking-wider text-alps-700 uppercase">
+        Civic Tech
+      </p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+        Civic Tech（シビックテック）とは
+      </h1>
+      <p class="mt-4 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">
+        <strong>Civic Tech（シビックテック）</strong>とは、<strong>Civic（市民・地域）</strong>と<strong>Technology（技術）</strong>を組み合わせた言葉です。市民自身がテクノロジーを活用し、自分たちの暮らす地域の課題を解決したり、暮らしや旅をより便利にしたりする取り組みを指します。
+      </p>
+    </header>
+
+    <section aria-labelledby="features-heading">
+      <h2 id="features-heading" class="text-xl font-bold tracking-tight text-slate-900">
+        シビックテックの3つの特徴
+      </h2>
+      <div class="mt-5 grid gap-5 sm:grid-cols-3">
+        {features.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-6">
+            <p class="font-mono text-xs font-semibold text-alps-700">
+              {item.number}
+            </p>
+            <h3 class="mt-2 text-base font-bold text-slate-900">
+              {item.title}
+            </h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section aria-labelledby="govtech-heading">
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <h2 id="govtech-heading" class="text-xl font-bold tracking-tight text-slate-900">
+          GovTech（ガブテック）との違いと補完関係
+        </h2>
+        <p class="mt-3 text-sm leading-relaxed text-slate-600">
+          似た言葉に「GovTech（ガブテック）」がありますが、役割が異なります。両者は対立するものではなく、<strong>行政がデータをオープンに公開し、市民がそれを使いやすいサービスにする</strong>という補完関係にあります。
+        </p>
+
+        <div class="mt-6 grid gap-4 sm:grid-cols-2">
+          <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
+            <p class="font-mono text-xs font-semibold text-slate-500">
+              GovTech（ガブテック）
+            </p>
+            <h3 class="mt-1 text-base font-bold text-slate-900">
+              行政・自治体主導のDX
+            </h3>
+            <p class="mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">
+              オンライン手続きの整備、庁内業務の効率化、公式オープンデータの公開基盤づくりなど、行政自身の仕組みをデジタル化する取り組みです。
+            </p>
+          </div>
+
+          <div class="rounded-xl border border-alps-200 bg-alps-50/60 p-5">
+            <p class="font-mono text-xs font-semibold text-alps-700">
+              Civic Tech（シビックテック）
+            </p>
+            <h3 class="mt-1 text-base font-bold text-alps-950">
+              市民・地域コミュニティ主体の課題解決
+            </h3>
+            <p class="mt-2 text-xs leading-relaxed text-slate-700 sm:text-sm">
+              公開されたオープンデータなどを活用し、ごみ出し案内・地域マップ・登山や観光の支援ツールなど、利用者目線の困りごとを解決するサービスを作る取り組みです。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="examples-heading">
+      <h2 id="examples-heading" class="text-xl font-bold tracking-tight text-slate-900">
+        身近なシビックテックの事例
+      </h2>
+      <p class="mt-2 text-sm text-slate-600">
+        日本国内でも、自治体の公開データを暮らしに役立つ形へ変えた取り組みが各地で生まれています。
+      </p>
+      <div class="mt-5 grid gap-5 sm:grid-cols-3">
+        {examples.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-6">
+            <h3 class="text-base font-bold text-slate-900">{item.name}</h3>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">
+              {item.summary}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section aria-labelledby="practice-heading">
+      <div class="rounded-2xl border border-alps-200 bg-alps-50/70 p-6 sm:p-8">
+        <p class="font-mono text-xs font-semibold tracking-wider text-alps-700 uppercase">
+          Matsumoto Open Data × Civic Tech
+        </p>
+        <h2 id="practice-heading" class="mt-2 text-xl font-bold tracking-tight text-slate-900">
+          このサイトでの実践
+        </h2>
+        <p class="mt-3 text-sm leading-relaxed text-slate-700">
+          「松本市オープンデータ活用サイト」は、松本市や長野県などが公開している一次データ（施設台帳、バス時刻、山のグレーディングなど）をもとに、暮らしや旅ですぐ使える1ページ完結型のツールを作って公開するシビックテックの実験場です。ソースコードや検討中のアイデアも GitHub で公開しながら、少しずつ改善を続けています。
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a
+            href="/"
+            class="inline-flex items-center rounded-xl bg-alps-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-alps-800"
+          >
+            公開中のサービスを見る
+          </a>
+          <a
+            href="/open-data/"
+            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            松本市のオープンデータとは
+          </a>
+          <a
+            href="/data/"
+            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            使用データ一覧を見る
+          </a>
+          <a
+            href="https://github.com/raichonomichi/matsumoto-opendata/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            アイデア・要望を見る (GitHub) ↗
+          </a>
+        </div>
+      </div>
+    </section>
+  </article>
+</BaseLayout>

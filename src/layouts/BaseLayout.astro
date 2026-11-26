@@ -23,7 +23,7 @@ const currentPath = Astro.url.pathname;
 
 const navItems = [
   { href: "/", label: "トップ" },
-  { href: "/data/", label: "データ一覧" },
+  { href: "/about/", label: "このサイトについて" },
 ];
 ---
 
@@ -208,6 +208,21 @@ const navItems = [
               このサイト
             </p>
             <ul class="space-y-1.5">
+              <li>
+                <a href="/about/" class="hover:text-alps-800 hover:underline">
+                  このサイトについて
+                </a>
+              </li>
+              <li>
+                <a href="/open-data/" class="hover:text-alps-800 hover:underline">
+                  松本市のオープンデータとは
+                </a>
+              </li>
+              <li>
+                <a href="/civic-tech/" class="hover:text-alps-800 hover:underline">
+                  Civic Techとは
+                </a>
+              </li>
               <li>
                 <a href="/data/" class="hover:text-alps-800 hover:underline">
                   データ一覧
