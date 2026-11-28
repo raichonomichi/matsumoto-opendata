@@ -1,0 +1,14 @@
+{
+  "id": "nagano-library-survey",
+  "name": "長野県公共図書館概況（H26〜R8年度版）",
+  "provider": "県立長野図書館・長野県図書館協会",
+  "description": "長野県内公共図書館の年次調査統計（5.資料・8.貸出・来館・3.奉仕対象人口）。松本市11館の児童向け貸出・児童登録者数・図書蔵書数・奉仕対象人口および令和7年度（2025年度）速報実績の補完に利用しています。",
+  "sourceUrl": "https://www.knowledge.pref.nagano.lg.jp/alliance/lib/general.html",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.ja",
+  "attribution": "県立長野図書館・長野県図書館協会「長野県公共図書館概況」（クリエイティブ・コモンズ 表示 - 継承 4.0 国際 ライセンス）をもとに松本市分を抽出・集計",
+  "format": ["Excel", "PDF"],
+  "updateFrequency": "年次更新",
+  "updatedAt": "2026-11-28",
+  "notes": "県立長野図書館サイトポリシーに基づき CC BY-SA 4.0 で提供されている調査Excel（平成26年度〜令和8年度版）から松本市各館の統計を抽出・結合しています。結合データセットおよび派生物にも同一ライセンス条件が継承されます。"
+}

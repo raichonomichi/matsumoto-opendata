@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-library-usage",
+  "name": "松本市 図書館利用状況（H25〜H30）",
+  "provider": "松本市（情報政策課 / 中央図書館）",
+  "description": "平成25年度〜平成30年度における松本市立図書館11館ごとの開館日数・蔵書数・登録者数（総数・児童）・貸出冊数（総数・児童）・調査相談・予約冊数・団体貸出を収録したオープンデータ。",
+  "sourceUrl": "http://linkdata.org/work/rdf1s7819i",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市 情報政策課「松本市 図書館利用状況」（クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+  "format": ["TSV", "Excel", "RDF/Turtle"],
+  "updateFrequency": "履歴データ（平成25〜30年度）",
+  "updatedAt": "2026-11-28",
+  "notes": "H30年度の「貸出冊数－児童」には原表由来の桁違い異常値（合計69,727冊）が含まれるため、同項目のみ県立長野図書館「長野県公共図書館概況（令和元年度版）」の実数値（合計634,213冊）で補完しています。"
+}
