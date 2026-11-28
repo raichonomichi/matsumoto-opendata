@@ -1,0 +1,10 @@
+{
+  "id": "matsumoto-weather-history",
+  "title": "松本の過去の今日の気温",
+  "summary": "松本で1年前・5年前・10年前の今日に観測された最低気温と最高気温を比べられます。",
+  "status": "published",
+  "path": "/matsumoto-weather-history/",
+  "datasets": ["jma-matsumoto-daily-temperature"],
+  "tags": ["気象", "気温", "過去の今日"],
+  "publishedAt": "2026-11-28"
+}

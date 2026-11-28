@@ -19,6 +19,7 @@
     "pipeline:yamagoya": "tsx pipelines/build-yamagoya.ts",
     "pipeline:matsumoto-castle": "tsx pipelines/build-matsumoto-castle.ts",
     "pipeline:free-wifi": "tsx pipelines/build-free-wifi.ts",
+    "pipeline:matsumoto-weather-history": "node --import tsx pipelines/build-matsumoto-weather-history.ts",
     "pipeline:population": "tsx pipelines/build-population.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
