@@ -1,0 +1,2150 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  evaluateCountdownBoard,
+  formatMinutesToHHMM,
+} from "@/lib/last-bus-engine";
+import { lastBusDatasetSchema } from "@/lib/last-bus-schema";
+
+const rawJson = readFileSync(path.resolve("src/data/last-bus.json"), "utf-8");
+const dataset = lastBusDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = ["matsumoto-gtfs-jp"];
+
+const bus1Meta = dataset.sources.gtfs.feeds.find(
+  (f) => f.feedId === "guruttomatsumotobus1",
+);
+const bus2Meta = dataset.sources.gtfs.feeds.find(
+  (f) => f.feedId === "guruttomatsumotobus2",
+);
+
+const initialPresetId = "matsumoto-station-area";
+// Build-time SSR preview snapshot (explicitly labeled for no-JS / pre-hydration fallback)
+const ssrReferenceDate = new Date("2026-11-27T19:30:00+09:00");
+const ssrReferenceLabel = "2026/11/27（金・平日ダイヤ参考スナップショット）";
+const ssrBoard = evaluateCountdownBoard(
+  dataset,
+  { kind: "preset", presetId: initialPresetId },
+  ssrReferenceDate,
+);
+
+const useCases = [
+  {
+    title: "飲み会や残業の帰り、終バスまであと何分か知りたい時",
+    description:
+      "松本バスターミナル・お城口・アルプス口など松本駅エリア始発の全26路線を1画面で一覧表示。あと何分で終バスが出るかを1秒単位でカウントダウンします。",
+  },
+  {
+    title: "外出先の最寄りバス停や観光地から乗れる最終便を探す時",
+    description:
+      "全674停留所の検索やGPSでの最寄り5停留所表示に対応。循環線でも停留所ごとの正確な方面（stop_headsign）と最終便・残り本数がわかります。",
+  },
+  {
+    title: "平日・土休日・祝日の終バス時刻を事前に計画したい時",
+    description:
+      "日時シミュレーターで「今夜20時」「今夜21時」「平日」「土休日」や任意の日時へ切り替え、祝日・お盆特例を含む運行ダイヤを事前確認できます。",
+  },
+] as const;
+
+const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
+---
+
+<BaseLayout
+  title="松本 最終バス・カウントダウン"
+  description="松本市ぐるっとまつもとバス（GTFS-JP全34路線・全674停留所）の終バスまでの残り時間をリアルタイムでカウントダウン。松本駅エリア発着一覧、最寄りバス停検索、祝日・お盆対応の日時シミュレーションを搭載。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero + Live Departure Board Header -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-8 text-white sm:px-9 sm:py-10">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-alps-200 ring-1 ring-white/15">
+          松本市 ぐるっとまつもとバス GTFS-JP
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          ダイヤ有効期間: {bus1Meta?.validFrom} 〜 {bus1Meta?.validUntil}
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          データ更新日: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        松本 最終バス・カウントダウン
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        「今日の終バス、あと何分で出ちゃう？」に特化したリアルタイム発車標。松本市公式 GTFS-JP（現行全{dataset.stats.routeCount}路線・全{dataset.stats.stopCount}停留所・{dataset.stats.tripCount}便）をもとに、終バスまでの残り時間・残り本数・ラスト3便・次回運行日をすぐ確認できます。
+      </p>
+
+      <!-- Live Clock & Active Pattern Bar -->
+      <div class="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-950/55 px-4 py-3.5 ring-1 ring-white/15">
+        <div class="flex flex-wrap items-center gap-3">
+          <div>
+            <p class="text-[10px] font-semibold tracking-wider text-alps-200 uppercase">
+              判定基準時刻（JST）
+            </p>
+            <p
+              id="live-clock"
+              class="font-mono text-lg font-bold tracking-tight text-white tabular-nums sm:text-xl"
+            >
+              --/--/-- (--) --:--:-- JST
+            </p>
+          </div>
+          <span
+            id="day-pattern-badge"
+            class="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-300/30"
+          >
+            ダイヤ読込中
+          </span>
+          <span
+            id="sim-indicator"
+            class="hidden rounded-full bg-amber-400/20 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-amber-300/40"
+          >
+            シミュレーション表示中
+          </span>
+        </div>
+
+        <button
+          id="hero-sim-reset"
+          type="button"
+          class="hidden rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-slate-950 transition hover:bg-amber-300"
+        >
+          現在時刻に戻す
+        </button>
+      </div>
+
+      <!-- 4 KPI Cards -->
+      <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">まもなく終バス（60分以内）</p>
+          <p id="kpi-soon" class="mt-0.5 font-mono text-xl font-bold tabular-nums">
+            --
+          </p>
+          <p id="kpi-imminent-note" class="mt-0.5 text-[11px] text-rose-200">
+            うち30分以内: --
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">まだ乗れる（運行中）</p>
+          <p id="kpi-active" class="mt-0.5 font-mono text-xl font-bold tabular-nums">
+            --
+          </p>
+          <p id="kpi-total-note" class="mt-0.5 text-[11px] text-alps-200">
+            対象表示枠: {ssrBoard.summary.totalCount} 件
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">本日終了・運休</p>
+          <p id="kpi-ended" class="mt-0.5 font-mono text-xl font-bold tabular-nums">
+            --
+          </p>
+          <p id="kpi-suspended-note" class="mt-0.5 text-[11px] text-alps-200">
+            うち本日運休: --
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">いちばん遅い終バス</p>
+          <p id="kpi-latest-time" class="mt-0.5 font-mono text-xl font-bold tabular-nums">
+            --:--
+          </p>
+          <p id="kpi-latest-route" class="mt-0.5 truncate text-[11px] text-alps-200">
+            計算中...
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section aria-labelledby="use-cases-heading" class="space-y-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="use-cases-heading"
+          class="text-base font-bold text-slate-900 sm:text-lg"
+        >
+          こんな時に使えます
+        </h2>
+        <p class="text-xs text-slate-500">
+          夜の帰宅確認／観光・通院帰りのバス停探し／事前スケジュール確認向け
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {useCases.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-bold text-alps-950">{item.title}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Notice & Official Links -->
+    <aside
+      aria-label="ご利用上の注意と対象外路線のご案内"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        時刻表データの範囲・対象外路線（アルピコ交通／JR線）について
+      </p>
+      <p class="mt-1 text-amber-900/90">{dataset.notice}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={dataset.officialLinks.matsumotoBusInfo}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-800"
+        >
+          松本市 ぐるっとまつもとバス案内 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.alpicoLocalMatsumoto}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          アルピコ交通 松本地区バス ↗
+        </a>
+        <a
+          href={dataset.officialLinks.alpicoRail}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          上高地線（電車）時刻表 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.alpicoKamikochi}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          上高地・乗鞍シャトルバス ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Control Panel -->
+    <section
+      aria-label="バス停・路線選択と日時シミュレーター"
+      class="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-6"
+    >
+      <!-- Mode Tabs -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div
+          role="tablist"
+          aria-label="表示モード切替"
+          class="inline-flex rounded-xl border border-slate-200 bg-white p-1"
+        >
+          <button
+            id="mode-tab-stop"
+            type="button"
+            role="tab"
+            data-mode-tab="stop"
+            aria-selected="true"
+            class="rounded-lg bg-alps-900 px-4 py-2 text-xs font-semibold text-white transition sm:text-sm"
+          >
+            バス停・エリアから探す
+          </button>
+          <button
+            id="mode-tab-routes"
+            type="button"
+            role="tab"
+            data-mode-tab="routes"
+            aria-selected="false"
+            class="rounded-lg px-4 py-2 text-xs font-semibold text-slate-700 transition hover:text-alps-900 sm:text-sm"
+          >
+            全{dataset.stats.routeCount}路線一覧
+          </button>
+        </div>
+
+        <p id="active-scope-label" class="text-xs font-semibold text-alps-900 sm:text-sm">
+          表示中: 松本駅エリア（全{dataset.stats.stationOriginRouteCount}路線）
+        </p>
+      </div>
+
+      <!-- Stop / Area Panel -->
+      <div id="panel-stop-mode" class="space-y-4 border-t border-slate-200/80 pt-4">
+        <div>
+          <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            1. 主要エリア・バス停を選ぶ（ワンタップ）
+          </p>
+          <div class="flex flex-wrap gap-2">
+            {dataset.presets.map((preset) => {
+              const isSelected = preset.id === initialPresetId;
+              return (
+                <button
+                  type="button"
+                  data-preset-btn={preset.id}
+                  aria-pressed={isSelected ? "true" : "false"}
+                  class:list={[
+                    "rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                    isSelected
+                      ? "bg-alps-900 text-white shadow-sm"
+                      : "border border-slate-300 bg-white text-slate-700 hover:border-alps-400 hover:text-alps-900",
+                  ]}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+          <p
+            id="preset-description"
+            class="mt-2.5 rounded-xl border border-alps-200/80 bg-white px-3.5 py-2 text-xs leading-relaxed text-slate-700"
+          >
+            {dataset.presets[0].description}
+          </p>
+        </div>
+
+        <!-- Stop Incremental Search & Geolocation -->
+        <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <div class="relative">
+            <label
+              for="stop-search-input"
+              class="block text-xs font-medium text-slate-700"
+            >
+              全{dataset.stats.stopCount}停留所から検索して切り替え
+            </label>
+            <div class="relative mt-1">
+              <input
+                id="stop-search-input"
+                type="search"
+                autocomplete="off"
+                placeholder="停留所名を入力（例: 松本城、浅間温泉、信大、村井駅）"
+                class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-alps-600 focus:outline-none"
+              />
+              <div
+                id="stop-search-results"
+                role="listbox"
+                aria-label="停留所検索候補"
+                class="absolute right-0 left-0 z-20 mt-1 hidden max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+              />
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              id="btn-geolocation"
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-alps-300 bg-white px-3.5 py-2 text-xs font-semibold text-alps-900 transition hover:border-alps-500 hover:bg-alps-50"
+            >
+              <span aria-hidden="true">📍</span>
+              <span>現在地から最寄りバス停を探す</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-500">
+          ※位置情報はブラウザ内での距離計算のみに使用し、外部送信しません。
+        </p>
+
+        <div
+          id="geo-status"
+          role="status"
+          aria-live="polite"
+          class="hidden rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700"
+        />
+
+        <div id="nearest-stops-bar" class="hidden space-y-1.5">
+          <p class="text-[11px] font-semibold text-slate-600">
+            現在地に近い停留所（タップで切替）:
+          </p>
+          <div id="nearest-stops-list" class="flex flex-wrap gap-2" />
+        </div>
+      </div>
+
+      <!-- All 34 Routes Guide Panel -->
+      <div
+        id="panel-routes-mode"
+        class="hidden space-y-3 border-t border-slate-200/80 pt-4"
+      >
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            全{dataset.stats.routeCount}路線（松本駅発着17＋地域連携17）の起点・方面別終バス
+          </p>
+          <p class="text-[11px] text-slate-500">
+            路線チップで絞り込み／各カードの「停車停留所から選ぶ」で途中バス停へ移動できます
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <label
+            for="route-jump-select"
+            class="text-xs font-medium text-slate-700"
+          >
+            路線を指定:
+          </label>
+          <select
+            id="route-jump-select"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-alps-600 focus:outline-none sm:text-sm"
+          >
+            <option value="all">全{dataset.stats.routeCount}路線を表示</option>
+            <optgroup label="松本駅・バスターミナル発着バス（17路線）">
+              {dataset.routes
+                .filter((r) => r.feedId === "guruttomatsumotobus1")
+                .map((r) => (
+                  <option value={r.key}>{r.name}</option>
+                ))}
+            </optgroup>
+            <optgroup label="地域連携バス（17路線）">
+              {dataset.routes
+                .filter((r) => r.feedId === "guruttomatsumotobus2")
+                .map((r) => (
+                  <option value={r.key}>
+                    {r.name}{!r.hasStationOrigin ? "（駅非経由）" : ""}
+                  </option>
+                ))}
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <!-- Date & Time Simulator -->
+      <div class="space-y-3 border-t border-slate-200/80 pt-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            2. 日時シミュレーター（夜間・平日・土休日を事前確認）
+          </p>
+          <button
+            id="sim-reset"
+            type="button"
+            class="hidden rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-900 transition hover:bg-amber-100"
+          >
+            リアルタイムへ戻す
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            data-sim-preset="now"
+            aria-pressed="true"
+            class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          >
+            現在時刻（リアルタイム）
+          </button>
+          <button
+            type="button"
+            data-sim-preset="tonight-20"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            今夜 20:00
+          </button>
+          <button
+            type="button"
+            data-sim-preset="tonight-21"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            今夜 21:00
+          </button>
+          <button
+            type="button"
+            data-sim-preset="weekday-1930"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            平日 19:30
+          </button>
+          <button
+            type="button"
+            data-sim-preset="holiday-1930"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            土休日 19:30
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-end gap-2">
+          <div>
+            <label
+              for="sim-date"
+              class="block text-[11px] font-medium text-slate-600"
+            >
+              日付指定
+            </label>
+            <input
+              id="sim-date"
+              type="date"
+              min={bus1Meta?.validFrom ?? "2026-08-01"}
+              max={bus1Meta?.validUntil ?? "2028-03-31"}
+              class="mt-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-alps-600 focus:outline-none sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              for="sim-time"
+              class="block text-[11px] font-medium text-slate-600"
+            >
+              時刻指定（JST）
+            </label>
+            <input
+              id="sim-time"
+              type="time"
+              class="mt-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-alps-600 focus:outline-none sm:text-sm"
+            />
+          </div>
+          <button
+            id="sim-apply"
+            type="button"
+            class="rounded-xl bg-alps-800 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-alps-700"
+          >
+            指定日時で確認
+          </button>
+        </div>
+
+        <p
+          id="sim-banner"
+          class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-medium text-amber-950"
+        />
+      </div>
+
+      <!-- Status Filters & Sort -->
+      <div class="space-y-3 border-t border-slate-200/80 pt-4">
+        <p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          3. 状態絞り込み・並び替え
+        </p>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-status-filter="all"
+              aria-pressed="true"
+              class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+            >
+              すべて
+            </button>
+            <button
+              type="button"
+              data-status-filter="active"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              まだ乗れる
+            </button>
+            <button
+              type="button"
+              data-status-filter="within60"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              60分以内
+            </button>
+            <button
+              type="button"
+              data-status-filter="pinned"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              ⭐ ピン留めのみ (<span id="pinned-count">0</span>)
+            </button>
+          </div>
+
+          <label class="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-700">
+            <input
+              id="pin-first-toggle"
+              type="checkbox"
+              checked
+              class="h-4 w-4 rounded border-slate-300 text-alps-900 focus:ring-alps-600"
+            />
+            <span>ピン留めを最上部に固定</span>
+          </label>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label
+              for="filter-feed"
+              class="block text-xs font-medium text-slate-700"
+            >
+              系統区分
+            </label>
+            <select
+              id="filter-feed"
+              class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-600 focus:outline-none"
+            >
+              <option value="all">すべて（全{dataset.stats.routeCount}路線）</option>
+              <option value="guruttomatsumotobus1">
+                松本駅・バスターミナル発着バス
+              </option>
+              <option value="guruttomatsumotobus2">地域連携バス</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              for="filter-keyword"
+              class="block text-xs font-medium text-slate-700"
+            >
+              路線名・行先・のりば検索
+            </label>
+            <input
+              id="filter-keyword"
+              type="search"
+              placeholder="例: 信大、浅間、23番、並柳"
+              class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-alps-600 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label
+              for="sort-order"
+              class="block text-xs font-medium text-slate-700"
+            >
+              並び替え
+            </label>
+            <select
+              id="sort-order"
+              class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-600 focus:outline-none"
+            >
+              <option value="urgent">終バスが近い順（緊急度優先）</option>
+              <option value="latest">終バスが遅い順</option>
+              <option value="next">次発が早い順</option>
+              <option value="route">路線名順</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <p class="text-xs font-semibold text-slate-700">
+            <span id="visible-count">{ssrBoard.summary.totalCount}</span> 件表示中
+          </p>
+          <button
+            id="filter-reset"
+            type="button"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+          >
+            条件をリセット
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Countdown Card Grid -->
+    <section aria-label="最終バス カウントダウン一覧" class="space-y-4">
+      <p
+        id="ssr-snapshot-notice"
+        class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-relaxed text-slate-700"
+      >
+        初期表示（JavaScript読込前・無効時）は{" "}
+        <strong class="font-semibold text-slate-900">{ssrReferenceLabel}</strong>{" "}
+        の参考時刻表を表示しています。土休日・祝日・お盆・特定曜日は最終時刻が異なるため、JavaScriptを有効にして現在時刻のダイヤをご確認ください。
+      </p>
+
+      <div id="board-list" class="grid gap-4 md:grid-cols-2">
+        {ssrBoard.items.map((item) => (
+          <article
+            class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5"
+            style={`border-left: 5px solid #${item.routeColor}`}
+          >
+            <div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                  {item.feedLabel}
+                </span>
+                {item.platformCode && (
+                  <span class="rounded-full bg-alps-50 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-alps-900 ring-1 ring-alps-200">
+                    {item.platformCode}番のりば
+                  </span>
+                )}
+              </div>
+              <h3 class="mt-2.5 text-base font-bold text-slate-900">
+                {item.routeName}
+              </h3>
+              <p class="mt-1 text-xs text-slate-600">
+                {item.stopName} → {item.headsign}
+              </p>
+              <div class="mt-3 flex items-baseline justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5">
+                <span class="text-xs font-semibold text-slate-500">
+                  {item.lastDepartureMinutes !== null
+                    ? `参考最終（2026/11/27 平日） ${formatMinutesToHHMM(item.lastDepartureMinutes)}`
+                    : "運行曜日限定"}
+                </span>
+                <span class="font-mono text-sm font-bold text-alps-950">
+                  {item.totalTrips > 0 ? `平日${item.totalTrips}本` : item.registeredDaysLabels.join("・")}
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div
+        id="empty-state"
+        class="hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"
+      >
+        <p class="text-sm font-semibold text-slate-800">
+          条件に一致する路線・便が見つかりませんでした
+        </p>
+        <p class="mt-1 text-xs text-slate-600">
+          状態フィルタを「すべて」に戻すか、別の停留所・日時をお試しください。
+        </p>
+        <button
+          id="empty-reset"
+          type="button"
+          class="mt-4 rounded-xl bg-alps-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-alps-800"
+        >
+          条件をリセットする
+        </button>
+      </div>
+    </section>
+
+    <!-- GTFS-JP Technical Spec & Attribution Details -->
+    <section aria-label="GTFS-JP データ仕様と技術ノート">
+      <details class="group rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold text-slate-900">
+          <span>GTFS-JP データ仕様・カウントダウン判定ルール（技術ノート）</span>
+          <span class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 transition group-open:bg-alps-900 group-open:text-white">
+            詳細を開く
+          </span>
+        </summary>
+
+        <div class="mt-4 space-y-4 border-t border-slate-200 pt-4 text-xs leading-relaxed text-slate-700">
+          <div class="grid gap-3 sm:grid-cols-2">
+            {[bus1Meta, bus2Meta]
+              .filter((f): f is NonNullable<typeof f> => Boolean(f))
+              .map((feed) => (
+                <div class="rounded-xl border border-slate-200 bg-white p-3.5">
+                  <p class="font-bold text-alps-950">{feed.feedName}</p>
+                  <p class="mt-0.5 font-mono text-[11px] text-slate-500">
+                    feed_id: {feed.feedId} / version: {feed.version}
+                  </p>
+                  <dl class="mt-2 grid grid-cols-2 gap-1.5 text-[11px]">
+                    <div>
+                      <dt class="text-slate-500">路線・標柱</dt>
+                      <dd class="font-semibold text-slate-900">
+                        {feed.routeCount} 路線 / {feed.stopCount} 標柱
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500">便数・停車数</dt>
+                      <dd class="font-semibold text-slate-900">
+                        {feed.tripCount} 便 / {feed.stopTimeCount.toLocaleString()} 件
+                      </dd>
+                    </div>
+                    <div class="col-span-2">
+                      <dt class="text-slate-500">有効期間 / 例外日反映</dt>
+                      <dd class="font-semibold text-slate-900">
+                        {feed.validFrom} 〜 {feed.validUntil}（calendar_dates:{" "}
+                        {feed.calendarDatesUntil ?? "なし"} まで）
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+          </div>
+
+          <ul class="list-disc space-y-1.5 pl-5">
+            <li>
+              <strong>路線数の補足:</strong> 本ページでは
+              <a
+                href={dataset.officialLinks.gtfsRepository}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-medium text-alps-800 underline underline-offset-2"
+              >
+                GTFSデータリポジトリ
+              </a>
+              公開の現行ダイヤ（{bus1Meta?.version}）全{dataset.stats.routeCount}路線・全{dataset.stats.stopCount}停留所を動的統合しています（過去の一部再編前路線は統合済み）。
+            </li>
+            <li>
+              <strong>方面判定と降車専用除外:</strong>{" "}
+              循環線や往復通し便の方面誤認を防ぐため、<code>stop_headsign</code>
+              （停留所ごとの行先表示）を優先採用し、終点および{" "}
+              <code>pickup_type=1</code>（降車専用）は除外しています。
+            </li>
+            <li>
+              <strong>カレンダー評価:</strong> GTFS 標準の{" "}
+              <code>calendar.txt</code>（曜日マスク・期間）と{" "}
+              <code>calendar_dates.txt</code>（祝日・お盆特例の追加/除外）を評価し、同日に複数{" "}
+              <code>service_id</code> が運行する路線（入山辺線・中山線等）は時刻を統合した上で終バスを算出しています。
+            </li>
+            <li>
+              <strong>URLクエリ連携:</strong>{" "}
+              <code>?stop=停留所名またはプリセットID</code>、<code>mode=routes</code>、<code>at=YYYY-MM-DDTHH:mm</code>{" "}
+              で特定の停留所やシミュレーション時刻を直接開けます。
+            </li>
+          </ul>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <script
+    id="last-bus-data"
+    type="application/json"
+    set:html={embeddedJson}
+  />
+
+  <script>
+    import {
+      type CountdownBoardResult,
+      type CountdownCardItem,
+      type CountdownStatus,
+      evaluateCountdownBoard,
+      findNearestStops,
+      formatCountdown,
+      formatMinutesToHHMM,
+      formatRemainingJapanese,
+      formatYmdWithWeekday,
+      getJstDateTimeParts,
+      isServiceActiveOnDate,
+      parseJstDateTimeInput,
+      type SelectionTarget,
+      shiftYmd,
+    } from "@/lib/last-bus-engine";
+    import type { LastBusDataset } from "@/lib/last-bus-schema";
+
+    const dataEl = document.getElementById("last-bus-data");
+    const dataset: LastBusDataset = dataEl?.textContent
+      ? JSON.parse(dataEl.textContent)
+      : {
+          version: "1.0",
+          generatedAt: "",
+          site: "https://modata.raichonomichi.net",
+          notice: "",
+          officialLinks: {
+            matsumotoBusInfo: "",
+            matsumotoGtfsPage: "",
+            gtfsRepository: "",
+            alpicoLocalMatsumoto: "",
+            alpicoKamikochi: "",
+            alpicoRail: "",
+          },
+          sources: {
+            gtfs: {
+              name: "",
+              sourceUrl: "",
+              license: "",
+              attribution: "",
+              feeds: [],
+            },
+          },
+          stats: {
+            routeCount: 0,
+            stopCount: 0,
+            tripCount: 0,
+            stopTimeCount: 0,
+            stationOriginRouteCount: 0,
+            scheduleGroupCount: 0,
+          },
+          presets: [],
+          stops: [],
+          routes: [],
+          services: [],
+          headsigns: [],
+          schedules: [],
+        };
+
+    const PIN_STORAGE_KEY = "modata:last-bus:pins:v1";
+    const WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"];
+
+    type ViewMode = "stop" | "routes";
+    type StatusFilter = "all" | "active" | "within60" | "pinned";
+    type SortOrder = "urgent" | "latest" | "next" | "route";
+
+    let viewMode: ViewMode = "stop";
+    let activePresetId: string | null =
+      dataset.presets[0]?.id ?? "matsumoto-station-area";
+    let activeStopIndex: number | null = null;
+    let selectedRouteKey = "all";
+    let statusFilter: StatusFilter = "all";
+    let feedFilter = "all";
+    let keywordFilter = "";
+    let sortOrder: SortOrder = "urgent";
+    let pinFirst = true;
+    let simDateTime: Date | null = null;
+    let activeSimPreset = "now";
+    let pinnedKeys = loadPinnedKeys();
+
+    let lastBucketMap = new Map<string, string>();
+    let lastYmd = "";
+    const ssrNoticeEl = document.getElementById("ssr-snapshot-notice");
+
+    const liveClockEl = document.getElementById("live-clock");
+    const dayPatternBadgeEl = document.getElementById("day-pattern-badge");
+    const simIndicatorEl = document.getElementById("sim-indicator");
+    const heroSimResetBtn = document.getElementById("hero-sim-reset");
+    const kpiSoonEl = document.getElementById("kpi-soon");
+    const kpiImminentNoteEl = document.getElementById("kpi-imminent-note");
+    const kpiActiveEl = document.getElementById("kpi-active");
+    const kpiTotalNoteEl = document.getElementById("kpi-total-note");
+    const kpiEndedEl = document.getElementById("kpi-ended");
+    const kpiSuspendedNoteEl = document.getElementById("kpi-suspended-note");
+    const kpiLatestTimeEl = document.getElementById("kpi-latest-time");
+    const kpiLatestRouteEl = document.getElementById("kpi-latest-route");
+
+    const modeTabButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-mode-tab]"),
+    );
+    const panelStopMode = document.getElementById("panel-stop-mode");
+    const panelRoutesMode = document.getElementById("panel-routes-mode");
+    const activeScopeLabelEl = document.getElementById("active-scope-label");
+    const presetButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-preset-btn]"),
+    );
+    const presetDescEl = document.getElementById("preset-description");
+    const stopSearchInput = document.getElementById(
+      "stop-search-input",
+    ) as HTMLInputElement | null;
+    const stopSearchResultsEl = document.getElementById("stop-search-results");
+    const geoButton = document.getElementById(
+      "btn-geolocation",
+    ) as HTMLButtonElement | null;
+    const geoStatusEl = document.getElementById("geo-status");
+    const nearestStopsBar = document.getElementById("nearest-stops-bar");
+    const nearestStopsList = document.getElementById("nearest-stops-list");
+    const routeJumpSelect = document.getElementById(
+      "route-jump-select",
+    ) as HTMLSelectElement | null;
+
+    const simPresetButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-sim-preset]"),
+    );
+    const simDateInput = document.getElementById(
+      "sim-date",
+    ) as HTMLInputElement | null;
+    const simTimeInput = document.getElementById(
+      "sim-time",
+    ) as HTMLInputElement | null;
+    const simApplyBtn = document.getElementById("sim-apply");
+    const simResetBtn = document.getElementById("sim-reset");
+    const simBannerEl = document.getElementById("sim-banner");
+
+    const statusFilterButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-status-filter]"),
+    );
+    const pinnedCountEl = document.getElementById("pinned-count");
+    const pinFirstToggle = document.getElementById(
+      "pin-first-toggle",
+    ) as HTMLInputElement | null;
+    const feedSelect = document.getElementById(
+      "filter-feed",
+    ) as HTMLSelectElement | null;
+    const keywordInput = document.getElementById(
+      "filter-keyword",
+    ) as HTMLInputElement | null;
+    const sortSelect = document.getElementById(
+      "sort-order",
+    ) as HTMLSelectElement | null;
+    const visibleCountEl = document.getElementById("visible-count");
+    const filterResetBtn = document.getElementById("filter-reset");
+    const emptyResetBtn = document.getElementById("empty-reset");
+    const boardListEl = document.getElementById("board-list");
+    const emptyStateEl = document.getElementById("empty-state");
+
+    function loadPinnedKeys(): Set<string> {
+      try {
+        const raw = window.localStorage.getItem(PIN_STORAGE_KEY);
+        if (!raw) return new Set();
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return new Set();
+        return new Set(parsed.filter((v): v is string => typeof v === "string"));
+      } catch {
+        return new Set();
+      }
+    }
+
+    function savePinnedKeys(): void {
+      try {
+        window.localStorage.setItem(
+          PIN_STORAGE_KEY,
+          JSON.stringify([...pinnedKeys]),
+        );
+      } catch {
+        // Ignore storage errors in private browsing
+      }
+    }
+
+    function escapeHtml(text: string): string {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function getEffectiveNow(): Date {
+      return simDateTime ?? new Date();
+    }
+
+    function getCurrentSelection(): SelectionTarget {
+      if (viewMode === "routes") {
+        return { kind: "all_routes" };
+      }
+      if (activeStopIndex !== null && dataset.stops[activeStopIndex]) {
+        return { kind: "stop", stopIndex: activeStopIndex };
+      }
+      return {
+        kind: "preset",
+        presetId: activePresetId ?? dataset.presets[0]?.id ?? "matsumoto-station-area",
+      };
+    }
+
+    function syncUrlParams(): void {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("stop");
+        url.searchParams.delete("mode");
+        url.searchParams.delete("route");
+        url.searchParams.delete("at");
+
+        if (viewMode === "routes") {
+          url.searchParams.set("mode", "routes");
+          if (selectedRouteKey !== "all") {
+            url.searchParams.set("route", selectedRouteKey);
+          }
+        } else if (activeStopIndex !== null && dataset.stops[activeStopIndex]) {
+          url.searchParams.set("stop", dataset.stops[activeStopIndex].name);
+        } else if (
+          activePresetId &&
+          activePresetId !== "matsumoto-station-area"
+        ) {
+          url.searchParams.set("stop", activePresetId);
+        }
+
+        if (simDateTime) {
+          const jst = getJstDateTimeParts(simDateTime);
+          const hh = String(jst.hour).padStart(2, "0");
+          const mm = String(jst.minute).padStart(2, "0");
+          url.searchParams.set("at", `${jst.ymd}T${hh}:${mm}`);
+        }
+
+        window.history.replaceState(null, "", url.toString());
+      } catch {
+        // Ignore history errors
+      }
+    }
+
+    function restoreFromUrlParams(): void {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const modeParam = params.get("mode");
+        const stopParam = params.get("stop");
+        const routeParam = params.get("route");
+        const atParam = params.get("at");
+
+        if (modeParam === "routes") {
+          viewMode = "routes";
+          if (
+            routeParam &&
+            dataset.routes.some((r) => r.key === routeParam)
+          ) {
+            selectedRouteKey = routeParam;
+            if (routeJumpSelect) routeJumpSelect.value = routeParam;
+          }
+        } else if (stopParam) {
+          const preset = dataset.presets.find((p) => p.id === stopParam);
+          if (preset) {
+            activePresetId = preset.id;
+            activeStopIndex = null;
+          } else {
+            const idx = dataset.stops.findIndex((s) => s.name === stopParam);
+            if (idx >= 0) {
+              activeStopIndex = idx;
+              activePresetId = null;
+            }
+          }
+        }
+
+        if (atParam) {
+          const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/.exec(atParam);
+          if (m) {
+            const parsed = parseJstDateTimeInput(m[1], m[2]);
+            if (parsed) {
+              simDateTime = parsed;
+              activeSimPreset = "custom";
+            }
+          }
+        }
+      } catch {
+        // Ignore malformed query params
+      }
+    }
+
+    function findTargetDateForPreset(presetType: "weekday" | "holiday"): string {
+      const todayJst = getJstDateTimeParts(new Date());
+      const weekdaySvc = dataset.services.find(
+        (s) => s.key === "guruttomatsumotobus1:平日",
+      );
+      const holidaySvc = dataset.services.find(
+        (s) => s.key === "guruttomatsumotobus1:土休日",
+      );
+      for (let delta = 0; delta <= 14; delta++) {
+        const d = shiftYmd(todayJst.ymd, delta);
+        if (
+          presetType === "weekday" &&
+          weekdaySvc &&
+          isServiceActiveOnDate(weekdaySvc, d.ymd, d.weekday)
+        ) {
+          return d.ymd;
+        }
+        if (
+          presetType === "holiday" &&
+          holidaySvc &&
+          isServiceActiveOnDate(holidaySvc, d.ymd, d.weekday)
+        ) {
+          return d.ymd;
+        }
+      }
+      return todayJst.ymd;
+    }
+
+    function applySimulationPreset(presetKey: string): void {
+      const todayYmd = getJstDateTimeParts(new Date()).ymd;
+      activeSimPreset = presetKey;
+
+      if (presetKey === "now") {
+        simDateTime = null;
+      } else if (presetKey === "tonight-20") {
+        simDateTime = parseJstDateTimeInput(todayYmd, "20:00");
+      } else if (presetKey === "tonight-21") {
+        simDateTime = parseJstDateTimeInput(todayYmd, "21:00");
+      } else if (presetKey === "weekday-1930") {
+        const ymd = findTargetDateForPreset("weekday");
+        simDateTime = parseJstDateTimeInput(ymd, "19:30");
+      } else if (presetKey === "holiday-1930") {
+        const ymd = findTargetDateForPreset("holiday");
+        simDateTime = parseJstDateTimeInput(ymd, "19:30");
+      }
+
+      updateSimulationUI();
+      syncUrlParams();
+      renderBoard(true);
+    }
+
+    function updateSimulationUI(): void {
+      const isSim = simDateTime !== null;
+      const effectiveJst = getJstDateTimeParts(getEffectiveNow());
+
+      if (simDateInput) simDateInput.value = effectiveJst.ymd;
+      if (simTimeInput) {
+        simTimeInput.value = `${String(effectiveJst.hour).padStart(2, "0")}:${String(effectiveJst.minute).padStart(2, "0")}`;
+      }
+
+      simIndicatorEl?.classList.toggle("hidden", !isSim);
+      heroSimResetBtn?.classList.toggle("hidden", !isSim);
+      simResetBtn?.classList.toggle("hidden", !isSim);
+
+      if (simBannerEl) {
+        if (isSim) {
+          const hh = String(effectiveJst.hour).padStart(2, "0");
+          const mm = String(effectiveJst.minute).padStart(2, "0");
+          simBannerEl.textContent = `日時シミュレーション中: ${effectiveJst.ymd} (${WEEKDAY_JA[effectiveJst.weekday]}) ${hh}:${mm} JST 基準の終バスを表示しています。`;
+          simBannerEl.classList.remove("hidden");
+        } else {
+          simBannerEl.classList.add("hidden");
+        }
+      }
+
+      for (const btn of simPresetButtons) {
+        const isSelected = btn.dataset.simPreset === activeSimPreset;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function updateModeAndStopControls(): void {
+      const isStopMode = viewMode === "stop";
+      panelStopMode?.classList.toggle("hidden", !isStopMode);
+      panelRoutesMode?.classList.toggle("hidden", isStopMode);
+
+      for (const btn of modeTabButtons) {
+        const isSelected = btn.dataset.modeTab === viewMode;
+        btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-lg bg-alps-900 px-4 py-2 text-xs font-semibold text-white transition sm:text-sm"
+          : "rounded-lg px-4 py-2 text-xs font-semibold text-slate-700 transition hover:text-alps-900 sm:text-sm";
+      }
+
+      for (const btn of presetButtons) {
+        const isSelected =
+          isStopMode &&
+          activeStopIndex === null &&
+          btn.dataset.presetBtn === activePresetId;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+
+      if (presetDescEl) {
+        if (activeStopIndex !== null && dataset.stops[activeStopIndex]) {
+          const stop = dataset.stops[activeStopIndex];
+          presetDescEl.textContent = `停留所「${stop.name}」（乗り入れ ${stop.routeCount} 路線）から出発するすべての便・終バスを表示しています。`;
+        } else {
+          const preset =
+            dataset.presets.find((p) => p.id === activePresetId) ??
+            dataset.presets[0];
+          presetDescEl.textContent = preset?.description ?? "";
+        }
+      }
+
+      if (activeScopeLabelEl) {
+        if (!isStopMode) {
+          if (selectedRouteKey !== "all") {
+            const r = dataset.routes.find((rt) => rt.key === selectedRouteKey);
+            activeScopeLabelEl.textContent = `表示中: ${r?.name ?? "路線指定"}（全起点）`;
+          } else {
+            activeScopeLabelEl.textContent = `表示中: 全${dataset.stats.routeCount}路線（起点・方面別）`;
+          }
+        } else if (activeStopIndex !== null && dataset.stops[activeStopIndex]) {
+          activeScopeLabelEl.textContent = `表示中: ${dataset.stops[activeStopIndex].name}`;
+        } else {
+          const preset =
+            dataset.presets.find((p) => p.id === activePresetId) ??
+            dataset.presets[0];
+          activeScopeLabelEl.textContent = `表示中: ${preset?.label ?? ""}`;
+        }
+      }
+    }
+
+    function updateStatusFilterControls(): void {
+      for (const btn of statusFilterButtons) {
+        const isSelected = btn.dataset.statusFilter === statusFilter;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+      if (pinnedCountEl) {
+        pinnedCountEl.textContent = String(pinnedKeys.size);
+      }
+    }
+
+    const STATUS_BADGE_MAP: Record<
+      CountdownStatus,
+      { label: string; badgeClass: string; timerClass: string }
+    > = {
+      imminent: {
+        label: "まもなく終バス（30分以内）",
+        badgeClass: "bg-rose-50 text-rose-800 ring-rose-200",
+        timerClass: "text-rose-700",
+      },
+      soon: {
+        label: "あと1時間以内",
+        badgeClass: "bg-amber-50 text-amber-800 ring-amber-200",
+        timerClass: "text-amber-700",
+      },
+      running: {
+        label: "運行中",
+        badgeClass: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+        timerClass: "text-alps-950",
+      },
+      ended: {
+        label: "本日終了",
+        badgeClass: "bg-slate-100 text-slate-600 ring-slate-200",
+        timerClass: "text-slate-500",
+      },
+      suspended: {
+        label: "本日運休",
+        badgeClass: "bg-slate-100 text-slate-500 ring-slate-200",
+        timerClass: "text-slate-500",
+      },
+    };
+
+    function getStatusBucket(item: CountdownCardItem): string {
+      return `${item.status}:${item.nextDepartureMinutes ?? "none"}`;
+    }
+
+    function filterAndSortItems(items: CountdownCardItem[]): CountdownCardItem[] {
+      const kw = keywordFilter.trim().toLowerCase();
+
+      const filtered = items.filter((item) => {
+        if (viewMode === "routes" && selectedRouteKey !== "all") {
+          if (item.routeKey !== selectedRouteKey) return false;
+        }
+        if (feedFilter !== "all" && item.feedId !== feedFilter) {
+          return false;
+        }
+        if (statusFilter === "active") {
+          if (item.remainingSeconds === null) return false;
+        } else if (statusFilter === "within60") {
+          if (item.remainingSeconds === null || item.remainingSeconds > 3600) {
+            return false;
+          }
+        } else if (statusFilter === "pinned") {
+          if (!pinnedKeys.has(item.key)) return false;
+        }
+        if (kw) {
+          const hay = [
+            item.routeName,
+            item.stopName,
+            item.headsign,
+            item.platformCode ? `${item.platformCode}番` : "",
+            item.feedLabel,
+          ]
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(kw)) return false;
+        }
+        return true;
+      });
+
+      const statusRank: Record<CountdownStatus, number> = {
+        imminent: 0,
+        soon: 1,
+        running: 2,
+        ended: 3,
+        suspended: 4,
+      };
+
+      return filtered.sort((a, b) => {
+        if (pinFirst) {
+          const pa = pinnedKeys.has(a.key) ? 0 : 1;
+          const pb = pinnedKeys.has(b.key) ? 0 : 1;
+          if (pa !== pb) return pa - pb;
+        }
+
+        if (sortOrder === "latest") {
+          const aActive = a.remainingSeconds !== null ? 0 : 1;
+          const bActive = b.remainingSeconds !== null ? 0 : 1;
+          if (aActive !== bActive) return aActive - bActive;
+          const la = a.lastDepartureMinutes ?? -1;
+          const lb = b.lastDepartureMinutes ?? -1;
+          if (lb !== la) return lb - la;
+        } else if (sortOrder === "next") {
+          const na = a.nextDepartureMinutes ?? 99999;
+          const nb = b.nextDepartureMinutes ?? 99999;
+          if (na !== nb) return na - nb;
+        } else if (sortOrder === "route") {
+          const rCmp = a.routeName.localeCompare(b.routeName, "ja");
+          if (rCmp !== 0) return rCmp;
+          return a.stopName.localeCompare(b.stopName, "ja");
+        } else {
+          const sr = statusRank[a.status] - statusRank[b.status];
+          if (sr !== 0) return sr;
+          if (a.remainingSeconds !== null && b.remainingSeconds !== null) {
+            if (a.remainingSeconds !== b.remainingSeconds) {
+              return a.remainingSeconds - b.remainingSeconds;
+            }
+          }
+          const la = a.lastDepartureMinutes ?? -1;
+          const lb = b.lastDepartureMinutes ?? -1;
+          if (lb !== la) return lb - la;
+        }
+
+        const rCmp = a.routeName.localeCompare(b.routeName, "ja");
+        if (rCmp !== 0) return rCmp;
+        return a.headsign.localeCompare(b.headsign, "ja");
+      });
+    }
+
+    function renderCardHtml(
+      item: CountdownCardItem,
+      nowSeconds: number,
+    ): string {
+      const meta = STATUS_BADGE_MAP[item.status];
+      const isPinned = pinnedKeys.has(item.key);
+      const isFinalNext =
+        item.remainingSeconds !== null && item.remainingTrips === 1;
+      const route = dataset.routes[item.routeIndex];
+
+      const countdownMain =
+        item.remainingSeconds !== null
+          ? formatCountdown(item.remainingSeconds)
+          : item.status === "ended"
+            ? "本日終了"
+            : "本日運休";
+
+      const countdownSub =
+        item.remainingSeconds !== null
+          ? `${formatRemainingJapanese(item.remainingSeconds)}（残り ${item.remainingTrips} 本）`
+          : item.nextOperating
+            ? `次回運行: ${formatYmdWithWeekday(item.nextOperating.ymd, item.nextOperating.weekday)} 始発 ${formatMinutesToHHMM(item.nextOperating.firstDepartureMinutes)} / 終 ${formatMinutesToHHMM(item.nextOperating.lastDepartureMinutes)}`
+            : `運行曜日: ${item.registeredDaysLabels.join("・")}`;
+
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.stopLat},${item.stopLng}`;
+
+      const lastTripsHtml =
+        item.lastTrips.length > 0
+          ? item.lastTrips
+              .map((min, idx) => {
+                const isLast = idx === item.lastTrips.length - 1;
+                const isPast = min * 60 <= nowSeconds;
+                const isNext = item.nextDepartureMinutes === min;
+                const chipClass = isPast
+                  ? "bg-slate-100 text-slate-400 line-through"
+                  : isLast
+                    ? "bg-rose-50 font-bold text-rose-800 ring-1 ring-rose-200"
+                    : isNext
+                      ? "bg-alps-900 font-bold text-white"
+                      : "bg-slate-100 font-medium text-slate-800";
+                return `<span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-[11px] ${chipClass}">${escapeHtml(formatMinutesToHHMM(min))}${isLast ? '<span class="text-[10px]">終</span>' : ""}</span>`;
+              })
+              .join("")
+          : '<span class="text-[11px] text-slate-400">本日の設定便なし</span>';
+
+      const allDeparturesHtml =
+        item.todayDepartures.length > 0
+          ? item.todayDepartures
+              .map((min) => {
+                const isPast = min * 60 <= nowSeconds;
+                const isLast = min === item.lastDepartureMinutes;
+                const isNext = min === item.nextDepartureMinutes;
+                const cls = isPast
+                  ? "bg-slate-100 text-slate-400 line-through"
+                  : isLast
+                    ? "bg-rose-50 font-bold text-rose-800 ring-1 ring-rose-200"
+                    : isNext
+                      ? "bg-alps-900 font-bold text-white"
+                      : "bg-white text-slate-800 ring-1 ring-slate-200";
+                return `<span class="rounded px-1.5 py-0.5 font-mono text-[11px] ${cls}">${escapeHtml(formatMinutesToHHMM(min))}</span>`;
+              })
+              .join("")
+          : `<p class="text-[11px] text-slate-500">本日は運休です（通常運行: ${escapeHtml(item.registeredDaysLabels.join("・"))}）。</p>`;
+
+      const routeStopsHtml =
+        viewMode === "routes" && route
+          ? `
+            <details data-details-kind="route-stops" class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+              <summary data-details-summary="route-stops" class="cursor-pointer text-[11px] font-semibold text-alps-800 hover:text-alps-950">
+                この路線の全${route.stopIndices.length}停留所から選んでカウントダウン表示
+              </summary>
+              <div class="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto pt-1">
+                ${route.stopIndices
+                  .map((sIdx) => {
+                    const st = dataset.stops[sIdx];
+                    if (!st) return "";
+                    return `<button type="button" data-jump-stop="${sIdx}" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 transition hover:border-alps-500 hover:bg-alps-50 hover:text-alps-950">${escapeHtml(st.name)}</button>`;
+                  })
+                  .join("")}
+              </div>
+            </details>
+          `
+          : "";
+
+      return `
+        <article
+          data-card-key="${escapeHtml(item.key)}"
+          class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-alps-300 hover:shadow-sm"
+          style="border-left: 5px solid #${escapeHtml(item.routeColor)}"
+        >
+          <div>
+            <!-- Badges + Pin -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${meta.badgeClass}">
+                  ${escapeHtml(meta.label)}
+                </span>
+                ${
+                  isFinalNext
+                    ? '<span class="rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white">次が最終！</span>'
+                    : ""
+                }
+                ${
+                  item.isNearTerminal
+                    ? '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">次が終点</span>'
+                    : ""
+                }
+                ${
+                  item.platformCode
+                    ? `<span class="rounded-full bg-alps-50 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-alps-900 ring-1 ring-alps-200">${escapeHtml(item.platformCode)}番のりば</span>`
+                    : ""
+                }
+                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                  ${escapeHtml(item.feedLabel)}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                data-pin-btn="${escapeHtml(item.key)}"
+                aria-pressed="${isPinned ? "true" : "false"}"
+                aria-label="${isPinned ? "ピン留めを解除" : "この路線をピン留め"}"
+                class="shrink-0 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                  isPinned
+                    ? "border-amber-300 bg-amber-50 text-amber-800"
+                    : "border-slate-200 bg-white text-slate-500 hover:border-amber-300 hover:text-amber-700"
+                }"
+              >
+                ${isPinned ? "★ 固定中" : "☆ 固定"}
+              </button>
+            </div>
+
+            <!-- Route & Direction -->
+            <h3 class="mt-3 text-base font-bold leading-snug text-slate-900 sm:text-lg">
+              ${escapeHtml(item.routeName)}
+            </h3>
+            <p class="mt-1 text-xs font-medium text-slate-700">
+              <span class="font-semibold text-alps-900">${escapeHtml(item.stopName)}</span>
+              <span class="mx-1 text-slate-400">→</span>
+              <span>${escapeHtml(item.headsign)}</span>
+            </p>
+
+            <!-- Countdown Panel -->
+            <div class="mt-3.5 rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <div>
+                  <p class="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+                    終バスまで
+                  </p>
+                  <p
+                    data-countdown-text
+                    class="font-mono text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${meta.timerClass}"
+                  >
+                    ${escapeHtml(countdownMain)}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+                    本日の最終発車
+                  </p>
+                  <p class="font-mono text-xl font-bold text-slate-900 tabular-nums">
+                    ${
+                      item.lastDepartureMinutes !== null
+                        ? escapeHtml(formatMinutesToHHMM(item.lastDepartureMinutes))
+                        : "--:--"
+                    }
+                  </p>
+                </div>
+              </div>
+              <p
+                data-countdown-sub
+                class="mt-1.5 text-xs font-medium text-slate-700"
+              >
+                ${escapeHtml(countdownSub)}
+              </p>
+            </div>
+
+            <!-- Next & Last 3 Timeline -->
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="text-slate-600">
+                ${
+                  item.nextDepartureMinutes !== null
+                    ? `次発: <span class="font-mono font-bold text-alps-950">${escapeHtml(formatMinutesToHHMM(item.nextDepartureMinutes))}</span>（全${item.totalTrips}本中）`
+                    : item.totalTrips > 0
+                      ? `本日全${item.totalTrips}本 発車済`
+                      : `適用ダイヤ: ${escapeHtml(item.registeredDaysLabels.join("・"))}`
+                }
+              </div>
+              <div class="flex flex-wrap items-center gap-1">
+                <span class="text-[11px] text-slate-500">終盤:</span>
+                ${lastTripsHtml}
+              </div>
+            </div>
+          </div>
+
+          <!-- Expandable Full Timetable & Stop Map -->
+          <div class="mt-3 border-t border-slate-100 pt-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-[11px] text-slate-500">
+                ${
+                  item.activeServiceLabels.length > 0
+                    ? `本日ダイヤ: ${escapeHtml(item.activeServiceLabels.join(" + "))}`
+                    : `通常ダイヤ: ${escapeHtml(item.registeredDaysLabels.join("・"))}`
+                }
+              </span>
+              <a
+                href="${escapeHtml(googleMapsUrl)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-[11px] font-semibold text-alps-800 underline underline-offset-2 hover:text-alps-950"
+              >
+                停留所の地図 ↗
+              </a>
+            </div>
+
+            <details data-details-kind="timetable" class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+              <summary data-details-summary="timetable" class="cursor-pointer text-[11px] font-semibold text-slate-700 hover:text-alps-950">
+                本日の全発車時刻を見る（${item.todayDepartures.length}本）
+              </summary>
+              <div class="mt-2 flex flex-wrap gap-1.5 pt-1">
+                ${allDeparturesHtml}
+              </div>
+            </details>
+            ${routeStopsHtml}
+          </div>
+        </article>
+      `;
+    }
+
+    function updateHeaderAndKpis(board: CountdownBoardResult): void {
+      const { jst, dayPatternLabel, summary } = board;
+      if (liveClockEl) {
+        const mm = String(jst.month).padStart(2, "0");
+        const dd = String(jst.day).padStart(2, "0");
+        const hh = String(jst.hour).padStart(2, "0");
+        const mi = String(jst.minute).padStart(2, "0");
+        const ss = String(jst.second).padStart(2, "0");
+        liveClockEl.textContent = `${jst.year}/${mm}/${dd} (${WEEKDAY_JA[jst.weekday]}) ${hh}:${mi}:${ss} JST`;
+      }
+      if (dayPatternBadgeEl) {
+        dayPatternBadgeEl.textContent = dayPatternLabel;
+      }
+      if (kpiSoonEl) {
+        kpiSoonEl.textContent = `${summary.imminentCount + summary.soonCount} 系統`;
+      }
+      if (kpiImminentNoteEl) {
+        kpiImminentNoteEl.textContent = `うち30分以内: ${summary.imminentCount} 系統`;
+      }
+      if (kpiActiveEl) {
+        kpiActiveEl.textContent = `${summary.activeCount} 系統`;
+      }
+      if (kpiTotalNoteEl) {
+        kpiTotalNoteEl.textContent = `表示対象計: ${summary.totalCount} 系統`;
+      }
+      if (kpiEndedEl) {
+        kpiEndedEl.textContent = `${summary.endedCount + summary.suspendedCount} 系統`;
+      }
+      if (kpiSuspendedNoteEl) {
+        kpiSuspendedNoteEl.textContent = `うち本日運休: ${summary.suspendedCount} 系統`;
+      }
+      if (kpiLatestTimeEl && kpiLatestRouteEl) {
+        if (
+          summary.latestActiveItem &&
+          summary.latestActiveItem.lastDepartureMinutes !== null
+        ) {
+          kpiLatestTimeEl.textContent = formatMinutesToHHMM(
+            summary.latestActiveItem.lastDepartureMinutes,
+          );
+          kpiLatestRouteEl.textContent = `${summary.latestActiveItem.routeName}（${summary.latestActiveItem.stopName}）`;
+        } else {
+          kpiLatestTimeEl.textContent = "--:--";
+          kpiLatestRouteEl.textContent = "本日の運行便は終了";
+        }
+      }
+    }
+
+    function captureBoardInteractionState(): {
+      openDetails: Set<string>;
+      focusTarget: {
+        cardKey: string;
+        kind: "pin" | "summary" | "jump" | "map";
+        value?: string;
+      } | null;
+    } {
+      const openDetails = new Set<string>();
+      let focusTarget: {
+        cardKey: string;
+        kind: "pin" | "summary" | "jump" | "map";
+        value?: string;
+      } | null = null;
+      if (!boardListEl) return { openDetails, focusTarget };
+
+      for (const det of boardListEl.querySelectorAll<HTMLDetailsElement>(
+        "details[open][data-details-kind]",
+      )) {
+        const card = det.closest<HTMLElement>("[data-card-key]");
+        const cardKey = card?.dataset.cardKey;
+        const kind = det.dataset.detailsKind;
+        if (cardKey && kind) {
+          openDetails.add(`${cardKey}::${kind}`);
+        }
+      }
+
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && boardListEl.contains(active)) {
+        const card = active.closest<HTMLElement>("[data-card-key]");
+        const cardKey = card?.dataset.cardKey;
+        if (cardKey) {
+          if (active.hasAttribute("data-pin-btn")) {
+            focusTarget = { cardKey, kind: "pin" };
+          } else if (active.hasAttribute("data-details-summary")) {
+            focusTarget = {
+              cardKey,
+              kind: "summary",
+              value: active.dataset.detailsSummary,
+            };
+          } else if (active.hasAttribute("data-jump-stop")) {
+            focusTarget = {
+              cardKey,
+              kind: "jump",
+              value: active.dataset.jumpStop,
+            };
+          } else if (active.tagName === "A") {
+            focusTarget = { cardKey, kind: "map" };
+          }
+        }
+      }
+
+      return { openDetails, focusTarget };
+    }
+
+    function restoreBoardInteractionState(state: {
+      openDetails: Set<string>;
+      focusTarget: {
+        cardKey: string;
+        kind: "pin" | "summary" | "jump" | "map";
+        value?: string;
+      } | null;
+    }): void {
+      if (!boardListEl) return;
+
+      for (const entry of state.openDetails) {
+        const sepIdx = entry.lastIndexOf("::");
+        if (sepIdx < 0) continue;
+        const cardKey = entry.slice(0, sepIdx);
+        const kind = entry.slice(sepIdx + 2);
+        const card = boardListEl.querySelector<HTMLElement>(
+          `[data-card-key="${CSS.escape(cardKey)}"]`,
+        );
+        const det = card?.querySelector<HTMLDetailsElement>(
+          `details[data-details-kind="${CSS.escape(kind)}"]`,
+        );
+        if (det) {
+          det.open = true;
+        }
+      }
+
+      if (state.focusTarget) {
+        const card = boardListEl.querySelector<HTMLElement>(
+          `[data-card-key="${CSS.escape(state.focusTarget.cardKey)}"]`,
+        );
+        if (!card) return;
+        let el: HTMLElement | null = null;
+        if (state.focusTarget.kind === "pin") {
+          el = card.querySelector<HTMLElement>("[data-pin-btn]");
+        } else if (
+          state.focusTarget.kind === "summary" &&
+          state.focusTarget.value
+        ) {
+          el = card.querySelector<HTMLElement>(
+            `[data-details-summary="${CSS.escape(state.focusTarget.value)}"]`,
+          );
+        } else if (
+          state.focusTarget.kind === "jump" &&
+          state.focusTarget.value
+        ) {
+          el = card.querySelector<HTMLElement>(
+            `[data-jump-stop="${CSS.escape(state.focusTarget.value)}"]`,
+          );
+        } else if (state.focusTarget.kind === "map") {
+          el = card.querySelector<HTMLElement>("a[href]");
+        }
+        el?.focus({ preventScroll: true });
+      }
+    }
+
+    function renderBoard(forceFull = false): void {
+      ssrNoticeEl?.classList.add("hidden");
+      const now = getEffectiveNow();
+      const board = evaluateCountdownBoard(
+        dataset,
+        getCurrentSelection(),
+        now,
+      );
+      updateHeaderAndKpis(board);
+
+      const nextYmd = board.jst.ymd;
+      const nextBucketMap = new Map<string, string>();
+      for (const item of board.items) {
+        nextBucketMap.set(item.key, getStatusBucket(item));
+      }
+
+      if (!forceFull && nextYmd === lastYmd) {
+        let bucketChanged = nextBucketMap.size !== lastBucketMap.size;
+        if (!bucketChanged) {
+          for (const [k, v] of nextBucketMap) {
+            if (lastBucketMap.get(k) !== v) {
+              bucketChanged = true;
+              break;
+            }
+          }
+        }
+        if (!bucketChanged) {
+          updateTimersOnly(board);
+          return;
+        }
+      }
+
+      lastYmd = nextYmd;
+      lastBucketMap = nextBucketMap;
+
+      const visibleItems = filterAndSortItems(board.items);
+      if (visibleCountEl) {
+        visibleCountEl.textContent = String(visibleItems.length);
+      }
+
+      if (boardListEl) {
+        const preservedState = captureBoardInteractionState();
+        boardListEl.innerHTML = visibleItems
+          .map((item) => renderCardHtml(item, board.jst.secondsOfDay))
+          .join("");
+        restoreBoardInteractionState(preservedState);
+      }
+      emptyStateEl?.classList.toggle("hidden", visibleItems.length > 0);
+    }
+
+    function updateTimersOnly(board: CountdownBoardResult): void {
+      updateHeaderAndKpis(board);
+      if (!boardListEl) return;
+
+      const itemByKey = new Map(board.items.map((item) => [item.key, item]));
+      const cards = boardListEl.querySelectorAll<HTMLElement>("[data-card-key]");
+      for (const card of cards) {
+        const key = card.dataset.cardKey ?? "";
+        const item = itemByKey.get(key);
+        if (!item || item.remainingSeconds === null) continue;
+
+        const timerEl = card.querySelector<HTMLElement>("[data-countdown-text]");
+        if (timerEl) {
+          timerEl.textContent = formatCountdown(item.remainingSeconds);
+        }
+        const subEl = card.querySelector<HTMLElement>("[data-countdown-sub]");
+        if (subEl) {
+          subEl.textContent = `${formatRemainingJapanese(item.remainingSeconds)}（残り ${item.remainingTrips} 本）`;
+        }
+      }
+    }
+
+    function tickRealtime(): void {
+      if (simDateTime !== null) return;
+      const now = new Date();
+      const board = evaluateCountdownBoard(
+        dataset,
+        getCurrentSelection(),
+        now,
+      );
+
+      let statusChanged = board.jst.ymd !== lastYmd;
+      if (!statusChanged) {
+        for (const item of board.items) {
+          if (lastBucketMap.get(item.key) !== getStatusBucket(item)) {
+            statusChanged = true;
+            break;
+          }
+        }
+      }
+
+      if (statusChanged) {
+        renderBoard(true);
+      } else {
+        updateTimersOnly(board);
+      }
+    }
+
+    function selectStopByIndex(stopIndex: number): void {
+      if (!dataset.stops[stopIndex]) return;
+      viewMode = "stop";
+      activeStopIndex = stopIndex;
+      activePresetId = null;
+      if (stopSearchInput) {
+        stopSearchInput.value = dataset.stops[stopIndex].name;
+      }
+      stopSearchResultsEl?.classList.add("hidden");
+      updateModeAndStopControls();
+      syncUrlParams();
+      renderBoard(true);
+    }
+
+    function updateStopSearchDropdown(): void {
+      if (!stopSearchInput || !stopSearchResultsEl) return;
+      const q = stopSearchInput.value.trim().toLowerCase();
+      if (!q) {
+        stopSearchResultsEl.classList.add("hidden");
+        stopSearchResultsEl.innerHTML = "";
+        return;
+      }
+
+      const matches: { idx: number; name: string; routeCount: number }[] = [];
+      for (let i = 0; i < dataset.stops.length; i++) {
+        const s = dataset.stops[i];
+        if (s.name.toLowerCase().includes(q)) {
+          matches.push({ idx: i, name: s.name, routeCount: s.routeCount });
+        }
+      }
+      matches.sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        if (b.routeCount !== a.routeCount) return b.routeCount - a.routeCount;
+        return a.name.localeCompare(b.name, "ja");
+      });
+
+      const top = matches.slice(0, 12);
+      if (top.length === 0) {
+        stopSearchResultsEl.innerHTML =
+          '<p class="px-3 py-2 text-xs text-slate-500">該当する停留所が見つかりません</p>';
+        stopSearchResultsEl.classList.remove("hidden");
+        return;
+      }
+
+      stopSearchResultsEl.innerHTML = top
+        .map(
+          (m) => `
+            <button
+              type="button"
+              role="option"
+              data-stop-option="${m.idx}"
+              class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs text-slate-800 transition hover:bg-alps-50 hover:text-alps-950"
+            >
+              <span class="font-semibold">${escapeHtml(m.name)}</span>
+              <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">${m.routeCount}路線</span>
+            </button>
+          `,
+        )
+        .join("");
+      stopSearchResultsEl.classList.remove("hidden");
+    }
+
+    function showGeoStatus(message: string, tone: "info" | "error" | "ok"): void {
+      if (!geoStatusEl) return;
+      geoStatusEl.textContent = message;
+      geoStatusEl.className =
+        tone === "error"
+          ? "rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900"
+          : tone === "ok"
+            ? "rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-900"
+            : "rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-700";
+      geoStatusEl.classList.remove("hidden");
+    }
+
+    function requestNearestStops(): void {
+      if (!navigator.geolocation) {
+        showGeoStatus(
+          "お使いのブラウザは現在地取得（Geolocation API）に対応していません。停留所検索または主要プリセットをご利用ください。",
+          "error",
+        );
+        return;
+      }
+      if (geoButton) geoButton.disabled = true;
+      showGeoStatus("現在地を取得しています…", "info");
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (geoButton) geoButton.disabled = false;
+          const nearest = findNearestStops(
+            dataset.stops,
+            pos.coords.latitude,
+            pos.coords.longitude,
+            5,
+          );
+          if (nearest.length === 0) return;
+
+          if (nearestStopsList && nearestStopsBar) {
+            nearestStopsList.innerHTML = nearest
+              .map((cand) => {
+                const distLabel =
+                  cand.distanceKm < 1
+                    ? `約${Math.round(cand.distanceKm * 1000)}m`
+                    : `約${cand.distanceKm.toFixed(1)}km`;
+                return `
+                  <button
+                    type="button"
+                    data-nearest-stop="${cand.stopIndex}"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-alps-300 bg-white px-3 py-1.5 text-xs font-semibold text-alps-900 transition hover:bg-alps-50"
+                  >
+                    <span>${escapeHtml(cand.stop.name)}</span>
+                    <span class="rounded-full bg-alps-100 px-1.5 py-0.5 font-mono text-[10px] text-alps-800">${escapeHtml(distLabel)}</span>
+                  </button>
+                `;
+              })
+              .join("");
+            nearestStopsBar.classList.remove("hidden");
+          }
+
+          showGeoStatus(
+            `最寄りの「${nearest[0].stop.name}」を選択しました（位置情報はブラウザ内のみで利用しています）。`,
+            "ok",
+          );
+          selectStopByIndex(nearest[0].stopIndex);
+        },
+        (err) => {
+          if (geoButton) geoButton.disabled = false;
+          const reason =
+            err.code === err.PERMISSION_DENIED
+              ? "位置情報の利用が許可されませんでした。"
+              : "現在地を取得できませんでした。";
+          showGeoStatus(
+            `${reason}主要プリセットまたは全674停留所検索からバス停をお選びください。`,
+            "error",
+          );
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+
+    function resetFilters(): void {
+      statusFilter = "all";
+      feedFilter = "all";
+      keywordFilter = "";
+      selectedRouteKey = "all";
+      sortOrder = "urgent";
+      pinFirst = true;
+      if (feedSelect) feedSelect.value = "all";
+      if (keywordInput) keywordInput.value = "";
+      if (routeJumpSelect) routeJumpSelect.value = "all";
+      if (sortSelect) sortSelect.value = "urgent";
+      if (pinFirstToggle) pinFirstToggle.checked = true;
+      updateStatusFilterControls();
+      updateModeAndStopControls();
+      renderBoard(true);
+    }
+
+    // Event bindings
+    for (const btn of modeTabButtons) {
+      btn.addEventListener("click", () => {
+        const nextMode = btn.dataset.modeTab as ViewMode | undefined;
+        if (!nextMode) return;
+        viewMode = nextMode;
+        updateModeAndStopControls();
+        syncUrlParams();
+        renderBoard(true);
+      });
+    }
+
+    for (const btn of presetButtons) {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.presetBtn;
+        if (!id) return;
+        viewMode = "stop";
+        activePresetId = id;
+        activeStopIndex = null;
+        if (stopSearchInput) stopSearchInput.value = "";
+        updateModeAndStopControls();
+        syncUrlParams();
+        renderBoard(true);
+      });
+    }
+
+    stopSearchInput?.addEventListener("input", updateStopSearchDropdown);
+    stopSearchInput?.addEventListener("focus", updateStopSearchDropdown);
+    stopSearchResultsEl?.addEventListener("click", (event) => {
+      const target =
+        event.target instanceof Element
+          ? event.target.closest<HTMLButtonElement>("[data-stop-option]")
+          : null;
+      if (!target) return;
+      const idx = Number.parseInt(target.dataset.stopOption ?? "", 10);
+      if (!Number.isNaN(idx)) {
+        selectStopByIndex(idx);
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (
+        stopSearchInput &&
+        stopSearchResultsEl &&
+        event.target instanceof Node &&
+        !stopSearchInput.contains(event.target) &&
+        !stopSearchResultsEl.contains(event.target)
+      ) {
+        stopSearchResultsEl.classList.add("hidden");
+      }
+    });
+
+    nearestStopsList?.addEventListener("click", (event) => {
+      const target =
+        event.target instanceof Element
+          ? event.target.closest<HTMLButtonElement>("[data-nearest-stop]")
+          : null;
+      if (!target) return;
+      const idx = Number.parseInt(target.dataset.nearestStop ?? "", 10);
+      if (!Number.isNaN(idx)) {
+        selectStopByIndex(idx);
+      }
+    });
+
+    geoButton?.addEventListener("click", requestNearestStops);
+
+    routeJumpSelect?.addEventListener("change", () => {
+      selectedRouteKey = routeJumpSelect.value;
+      updateModeAndStopControls();
+      syncUrlParams();
+      renderBoard(true);
+    });
+
+    for (const btn of simPresetButtons) {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.simPreset;
+        if (key) applySimulationPreset(key);
+      });
+    }
+
+    simApplyBtn?.addEventListener("click", () => {
+      const dVal = simDateInput?.value ?? "";
+      const tVal = simTimeInput?.value ?? "";
+      const parsed = parseJstDateTimeInput(dVal, tVal);
+      if (!parsed) return;
+      simDateTime = parsed;
+      activeSimPreset = "custom";
+      updateSimulationUI();
+      syncUrlParams();
+      renderBoard(true);
+    });
+
+    const resetSimulation = () => applySimulationPreset("now");
+    simResetBtn?.addEventListener("click", resetSimulation);
+    heroSimResetBtn?.addEventListener("click", resetSimulation);
+
+    for (const btn of statusFilterButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.dataset.statusFilter as StatusFilter | undefined;
+        if (!next) return;
+        statusFilter = next;
+        updateStatusFilterControls();
+        renderBoard(true);
+      });
+    }
+
+    pinFirstToggle?.addEventListener("change", () => {
+      pinFirst = pinFirstToggle.checked;
+      renderBoard(true);
+    });
+
+    feedSelect?.addEventListener("change", () => {
+      feedFilter = feedSelect.value;
+      renderBoard(true);
+    });
+
+    keywordInput?.addEventListener("input", () => {
+      keywordFilter = keywordInput.value;
+      renderBoard(true);
+    });
+
+    sortSelect?.addEventListener("change", () => {
+      sortOrder = (sortSelect.value as SortOrder) ?? "urgent";
+      renderBoard(true);
+    });
+
+    filterResetBtn?.addEventListener("click", resetFilters);
+    emptyResetBtn?.addEventListener("click", resetFilters);
+
+    boardListEl?.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) return;
+
+      const pinBtn = event.target.closest<HTMLButtonElement>("[data-pin-btn]");
+      if (pinBtn) {
+        const key = pinBtn.dataset.pinBtn;
+        if (!key) return;
+        if (pinnedKeys.has(key)) {
+          pinnedKeys.delete(key);
+        } else {
+          pinnedKeys.add(key);
+        }
+        savePinnedKeys();
+        updateStatusFilterControls();
+        renderBoard(true);
+        return;
+      }
+
+      const jumpBtn = event.target.closest<HTMLButtonElement>("[data-jump-stop]");
+      if (jumpBtn) {
+        const idx = Number.parseInt(jumpBtn.dataset.jumpStop ?? "", 10);
+        if (!Number.isNaN(idx)) {
+          selectStopByIndex(idx);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
+    });
+
+    // Initial render
+    restoreFromUrlParams();
+    updateModeAndStopControls();
+    updateSimulationUI();
+    updateStatusFilterControls();
+    renderBoard(true);
+
+    window.setInterval(tickRealtime, 1000);
+  </script>
+</BaseLayout>
