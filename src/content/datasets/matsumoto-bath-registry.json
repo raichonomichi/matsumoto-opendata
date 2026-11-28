@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-bath-registry",
+  "name": "松本市の生活衛生施設データ（公衆浴場）",
+  "provider": "松本市（DX推進本部・食品・生活衛生課）",
+  "description": "松本市保健所が公衆浴場法に基づき許可している施設台帳（一般公衆浴場・その他の公衆浴場・全126件）。施設名称・郵便番号・所在地・営業者・種別・許可日・許可番号を収録。",
+  "sourceUrl": "http://linkdata.org/work/rdf1s8757i",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市　DX推進本部「松本市の生活衛生施設データ（matsumoto_bath）」（クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+  "format": ["TSV", "Excel", "RDF/Turtle"],
+  "updateFrequency": "随時更新",
+  "updatedAt": "2026-11-28",
+  "notes": "松本市オープンデータ案内ページでは原則 CC BY 4.0 と案内されていますが、LinkData.org 配布ファイルヘッダの明記に従い CC BY 3.0 として登録しています。台帳には一般日帰り入浴可能な施設のほかに、浅間温泉の地元専用共同浴場・宿泊者限定施設・会員制スポーツクラブ等も含まれるため、利用可否区分・営業時間目安を付与して整理しています。"
+}

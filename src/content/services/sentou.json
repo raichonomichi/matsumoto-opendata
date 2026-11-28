@@ -1,0 +1,10 @@
+{
+  "id": "sentou",
+  "title": "松本 銭湯・温泉・温浴施設さがし",
+  "summary": "街の銭湯・スーパー銭湯・日帰り温泉から地元専用浴場・宿泊者限定施設まで。松本市の公衆浴場台帳（126件）と祝日データをもとに、どこにあって・一般利用できるか・今日これから入れるかを調べられます。",
+  "status": "published",
+  "path": "/sentou/",
+  "datasets": ["matsumoto-bath-registry", "cao-national-holidays"],
+  "tags": ["銭湯", "日帰り温泉", "温浴施設", "今すぐ入れる"],
+  "publishedAt": "2026-11-28"
+}
