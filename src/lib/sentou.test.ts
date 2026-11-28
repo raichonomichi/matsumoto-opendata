@@ -58,6 +58,9 @@ describe("evaluateBathAvailability & helpers", () => {
     "2026-05-06": "休日",
     "2026-11-03": "文化の日",
     "2026-11-23": "勤労感謝の日",
+    "2027-05-03": "憲法記念日",
+    "2027-05-04": "みどりの日",
+    "2027-05-05": "こどもの日",
   };
 
   it("formats 24:00 and durations cleanly", () => {
@@ -178,6 +181,23 @@ describe("evaluateBathAvailability & helpers", () => {
         holidays,
       ).status,
     ).toBe("closed_today");
+
+    // 枇杷の湯 (Mon closed -> open on Mon holiday, closed next day EVEN if next day is also a holiday)
+    const biwanoyu = BATH_CURATIONS["36"].schedule;
+    expect(
+      evaluateBathAvailability(
+        biwanoyu,
+        new Date("2027-05-03T03:00:00Z"), // Mon 2027-05-03 12:00 JST (憲法記念日)
+        holidays,
+      ).status,
+    ).toBe("open_now");
+    const biwanoyuNextHoliday = evaluateBathAvailability(
+      biwanoyu,
+      new Date("2027-05-04T03:00:00Z"), // Tue 2027-05-04 12:00 JST (みどりの日)
+      holidays,
+    );
+    expect(biwanoyuNextHoliday.status).toBe("closed_today");
+    expect(biwanoyuNextHoliday.detailText).toContain("翌日振替休館");
   });
 
   it("handles seasonal closures, seasonal hours/openDays overrides, and multi-session schedules", () => {

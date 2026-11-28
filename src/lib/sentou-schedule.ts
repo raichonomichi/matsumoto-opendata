@@ -199,18 +199,16 @@ function checkHolidayRule(
   }
 
   if (rule === "open_closed_weekday_shift_next_day") {
+    const yesterday = shiftYmd(jst.ymd, -1);
+    const yHolName = holidays[yesterday.ymd];
+    if (yHolName && !effectiveOpenDays.includes(yesterday.weekday)) {
+      return {
+        closedDetail: `${WEEKDAY_NAMES_JA[yesterday.weekday]}曜祝日（${yHolName}）の翌日振替休館`,
+        holidayOpenOverride: false,
+      };
+    }
     if (!effectiveOpenDays.includes(jst.weekday) && isTodayHoliday) {
       return { closedDetail: null, holidayOpenOverride: true };
-    }
-    if (!isTodayHoliday) {
-      const yesterday = shiftYmd(jst.ymd, -1);
-      const yHolName = holidays[yesterday.ymd];
-      if (yHolName && !effectiveOpenDays.includes(yesterday.weekday)) {
-        return {
-          closedDetail: `${WEEKDAY_NAMES_JA[yesterday.weekday]}曜祝日（${yHolName}）の翌日振替休館`,
-          holidayOpenOverride: false,
-        };
-      }
     }
     return { closedDetail: null, holidayOpenOverride: false };
   }
