@@ -1,0 +1,13 @@
+{
+  "id": "jma-matsumoto-daily-temperature",
+  "name": "松本の日別最低・最高気温",
+  "provider": "気象庁",
+  "description": "松本特別地域気象観測所（地点番号47618）の日別の最低気温と最高気温。",
+  "sourceUrl": "https://www.data.jma.go.jp/risk/obsdl/",
+  "license": "公共データ利用規約（第1.0版）",
+  "licenseUrl": "https://www.jma.go.jp/jma/kishou/info/coment.html",
+  "attribution": "気象庁「過去の気象データ・ダウンロード」の松本の日別値を加工して作成。",
+  "format": ["CSV"],
+  "updateFrequency": "年1回取り込み",
+  "updatedAt": "2026-11-28"
+}
