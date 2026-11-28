@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-library-overview",
+  "name": "松本市図書館「図書館概要」（令和6年度・令和7年度版）",
+  "provider": "松本市中央図書館",
+  "description": "松本市図書館の年報「図書館概要」（令和6年度版・令和7年度版）。昭和42年〜令和6年度の分館整備と蔵書・貸出の長期推移、1980・1990・2000年の利用実績、令和5・6年度の年齢階層別登録者数・登録率・実利用率（11年齢区分）、協働電子図書館「デジとしょ信州」実績等を収録。",
+  "sourceUrl": "https://www.lib.city.matsumoto.lg.jp/0000000089.html",
+  "license": "その他",
+  "licenseUrl": "https://www.lib.city.matsumoto.lg.jp/0000000118.html",
+  "attribution": "松本市中央図書館「令和6年度 図書館概要」「令和7年度 図書館概要」",
+  "format": ["PDF"],
+  "updateFrequency": "年次更新",
+  "updatedAt": "2026-11-28",
+  "notes": "年齢別登録者数（0〜6歳〜71歳以上の11区分）および昭和42年〜令和6年度の長期推移を出典明記のうえ構造化しています。"
+}

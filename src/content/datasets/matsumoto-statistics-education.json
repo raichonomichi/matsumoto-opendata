@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-statistics-education",
+  "name": "松本市の統計「C 教育・文化」（市立図書館利用状況）",
+  "provider": "松本市（総務部 行政管理課 / 教育委員会）",
+  "description": "総合統計書「松本市の統計」（令和3年版〜令和7年版）の教育・文化章に収録されている「市立図書館利用状況」（平成30年度〜令和6年度の各館・サービスポイント別の開館日数・全資料蔵書数・登録者数・貸出冊数・調査相談・予約冊数・団体貸出・臨時閉館情報）。",
+  "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/5/5977.html",
+  "license": "その他",
+  "licenseUrl": "https://www.city.matsumoto.nagano.jp/site/userguide/58387.html",
+  "attribution": "松本市「松本市の統計（C 教育・文化／市立図書館利用状況）」",
+  "format": ["Excel", "PDF"],
+  "updateFrequency": "年次更新",
+  "updatedAt": "2026-11-28",
+  "notes": "令和3年版〜令和7年版の公開Excelファイルを一次取得し、平成30年度〜令和6年度の全資料蔵書数・総登録者数・総貸出冊数・予約冊数・調査相談・サービスポイント実績を接続しています。"
+}

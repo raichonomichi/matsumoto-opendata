@@ -1,0 +1,15 @@
+{
+  "id": "library-usage",
+  "title": "松本市図書館 利用状況グラフ",
+  "summary": "蔵書数・登録者数・貸出冊数が年代別（1980〜2025年度の長期推移、一般 vs 児童、0歳〜71歳以上の年齢階層別）でどう変化しているかをインタラクティブなグラフで可視化。全11館の比較も確認できます。",
+  "status": "published",
+  "path": "/library-usage/",
+  "datasets": [
+    "matsumoto-library-usage",
+    "matsumoto-statistics-education",
+    "matsumoto-library-overview",
+    "nagano-library-survey"
+  ],
+  "tags": ["図書館", "統計グラフ", "蔵書・貸出", "教育・文化"],
+  "publishedAt": "2026-11-28"
+}
