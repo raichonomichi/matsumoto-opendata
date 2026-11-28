@@ -1,0 +1,15 @@
+{
+  "id": "matsumoto-events-fy2026",
+  "name": "松本市 令和8年度イベント一覧",
+  "provider": "松本市（DX推進本部）",
+  "description": "令和8年度（2026年4月〜2027年3月）に松本市内で開催される主なイベントの名称・開催時期・場所・内容・問い合わせ先・URLを収録。",
+  "sourceUrl": "http://linkdata.org/work/rdf1s9164i",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市 DX推進本部「松本市 令和8年度イベント一覧（ivento_itiran）」（クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+  "format": ["TSV", "Excel", "RDF/Turtle"],
+  "updateFrequency": "年度更新",
+  "updatedAt": "2026-11-28",
+  "validUntil": "2027-03-31",
+  "notes": "LinkData.org 配布ファイルヘッダの明記に従い CC BY 3.0 として登録しています。松本城内・中心市街地・周辺文化施設のイベントをキュレーション抽出し、Excel シリアル値や日程表記を正規化しています。"
+}

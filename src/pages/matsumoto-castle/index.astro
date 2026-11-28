@@ -1,0 +1,1561 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { matsumotoCastleDatasetSchema } from "@/lib/matsumoto-castle-schema";
+
+const rawJson = readFileSync(
+  path.resolve("src/data/matsumoto-castle.json"),
+  "utf-8",
+);
+const dataset = matsumotoCastleDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = [
+  "matsumoto-events-fy2026",
+  "matsumoto-tourism-monthly",
+  "matsumoto-weather-stats",
+  "cao-national-holidays",
+];
+
+const castleEventCount = dataset.events.filter(
+  (e) => e.scope === "castle",
+).length;
+const downtownEventCount = dataset.events.filter(
+  (e) => e.scope === "downtown",
+).length;
+const exhibitionCount = dataset.events.filter(
+  (e) => e.scope === "nearby_exhibition",
+).length;
+
+const maxMonthlyVisitors = Math.max(
+  ...dataset.monthlyStats.map((m) => m.avgVisitors),
+);
+
+const monthKeys = Array.from(
+  new Set(dataset.days.map((d) => d.date.slice(0, 7))),
+);
+
+const useCases = [
+  {
+    title: "混雑を避けてゆっくり天守に登りたい時",
+    description:
+      "過去の月別観覧者数と連休・イベント予定を組み合わせ、比較的空いている狙い目の平日や季節をすぐに見つけられます。",
+  },
+  {
+    title: "市街地のお祭りや交通規制と重ならないか確認したい時",
+    description:
+      "松本城内の催しに加え、松本ぼんぼん・クラフトフェア・松本あめ市など中心市街地が賑わう大型イベントもまとめて把握できます。",
+  },
+  {
+    title: "季節ごとの混み具合・気温や雨の目安を比べたい時",
+    description:
+      "1〜12月の実測観覧者数と過去10年の平均気温・降水量を一覧比較し、旅の時期選びや防寒・雨具の準備に役立てられます。",
+  },
+] as const;
+
+const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
+---
+
+<BaseLayout
+  title="松本城いつ行く？カレンダー"
+  description="混雑やイベントを避けて国宝松本城へ行く狙い目の日を提案。松本市のイベント一覧、過去3年の月別観覧者数、気象データ、祝日から日ごとの混雑傾向と開場時間を確認できます。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-9 text-white sm:px-9 sm:py-11">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-alps-200 ring-1 ring-white/15">
+          国宝松本城 訪問計画サポート
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          データ更新日: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        松本城いつ行く？カレンダー
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        「混雑を避けてゆっくり天守に登れる日はいつ？」「イベント開催日や連休と重ならない？」——松本市のイベント情報・過去3年の月別観覧者数統計・気象データ・国民の祝日を掛け合わせ、日ごとの混雑傾向と狙い目の日を案内します。
+      </p>
+
+      <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">カレンダー対象期間</p>
+          <p class="mt-0.5 text-lg font-bold">2026年4月〜2027年12月</p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            計 {dataset.days.length} 日（公式イベント反映: 〜2027年3月）
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">収録イベント（令和8年度）</p>
+          <p class="mt-0.5 text-lg font-bold">
+            城・市街地 {castleEventCount + downtownEventCount} 件
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            城内 {castleEventCount} 件・市街地 {downtownEventCount} 件（周辺展示{" "}
+            {exhibitionCount} 件別枠）
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">年間平均観覧者数（2023〜2025年）</p>
+          <p class="mt-0.5 text-lg font-bold">
+            約 {(dataset.annualAvgVisitors / 10000).toFixed(1)} 万人 / 年
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            最多 4月（約12.6万人）・最少 12月（約3.4万人）
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section aria-labelledby="use-cases-heading" class="space-y-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="use-cases-heading"
+          class="text-base font-bold text-slate-900 sm:text-lg"
+        >
+          こんな時に使えます
+        </h2>
+        <p class="text-xs text-slate-500">
+          松本城の訪問日程決め・穴場日探し・季節計画向け
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {useCases.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-bold text-alps-950">{item.title}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Notice & Official Links -->
+    <aside
+      aria-label="ご利用上の注意と公式案内"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        混雑予想の算出根拠と最新情報の確認について
+      </p>
+      <p class="mt-1 text-amber-900/90">{dataset.notice}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={dataset.officialLinks.info}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-800"
+        >
+          公式 観覧案内・営業時間 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.eTicket}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          日時指定 電子チケット案内 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.eventCalendar}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          公式 混雑予想・待ち時間を確認 ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Recommendation Finder -->
+    <section
+      aria-labelledby="finder-heading"
+      class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="finder-heading" class="text-lg font-bold text-slate-900">
+            条件から「いつ行く？」を探す
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            目的と曜日の条件に合うおすすめ日を最大6件提案します。カードを選ぶとカレンダー上の詳細へ移動します。
+          </p>
+        </div>
+        <p id="finder-anchor-note" class="text-[11px] font-medium text-slate-500" />
+      </div>
+
+      <div class="mt-4 grid gap-4 border-t border-slate-200/80 pt-4 md:grid-cols-3">
+        <div>
+          <p class="text-xs font-semibold text-slate-700">1. 目的モード</p>
+          <div
+            class="mt-2 flex flex-wrap gap-2"
+            role="group"
+            aria-label="目的モード切替"
+          >
+            <button
+              type="button"
+              data-goal-btn="avoid_crowd"
+              aria-pressed="true"
+              class="rounded-xl bg-alps-900 px-3 py-2 text-xs font-semibold text-white transition"
+            >
+              混雑を避けたい（穴場狙い）
+            </button>
+            <button
+              type="button"
+              data-goal-btn="with_event"
+              aria-pressed="false"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              イベントに合わせて行く
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-700">2. 行ける曜日</p>
+          <div
+            class="mt-2 flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="曜日条件切替"
+          >
+            <button
+              type="button"
+              data-dow-btn="all"
+              aria-pressed="true"
+              class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+            >
+              いつでも
+            </button>
+            <button
+              type="button"
+              data-dow-btn="weekday"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              平日のみ
+            </button>
+            <button
+              type="button"
+              data-dow-btn="weekend_holiday"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              土日祝のみ
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-700">3. 探す期間</p>
+          <div
+            class="mt-2 flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="対象期間切替"
+          >
+            <button
+              type="button"
+              data-window-btn="next_30"
+              aria-pressed="true"
+              class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+            >
+              今後30日間
+            </button>
+            <button
+              type="button"
+              data-window-btn="current_month"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              選択中の月
+            </button>
+            <button
+              type="button"
+              data-window-btn="next_90"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              今後90日間
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="recommendations-grid" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" />
+      <div
+        id="recommendations-empty"
+        class="mt-4 hidden rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-600"
+      />
+    </section>
+
+    <!-- Calendar + Day Detail -->
+    <section
+      id="calendar-section"
+      aria-labelledby="calendar-heading"
+      class="scroll-mt-24 space-y-4"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="calendar-heading" class="text-xl font-bold text-slate-900">
+            月別カレンダー・日ごとの混雑予想
+          </h2>
+          <p class="mt-0.5 text-xs text-slate-600">
+            日付をクリックすると右（スマホは下）に混雑スコアの根拠・開場時間・イベント詳細を表示します。
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            id="prev-month-btn"
+            type="button"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ← 前月
+          </button>
+          <label class="sr-only" for="month-select">表示する月を選択</label>
+          <select
+            id="month-select"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-alps-950 focus:border-alps-500 focus:outline-none"
+          >
+            {monthKeys.map((ym) => {
+              const [y, m] = ym.split("-");
+              const suffix = ym > "2027-03" ? "（統計・祝日予測）" : "";
+              return (
+                <option value={ym}>
+                  {y}年{Number.parseInt(m, 10)}月{suffix}
+                </option>
+              );
+            })}
+          </select>
+          <button
+            id="next-month-btn"
+            type="button"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            次月 →
+          </button>
+          <button
+            id="today-jump-btn"
+            type="button"
+            class="rounded-xl bg-alps-100 px-3 py-2 text-xs font-semibold text-alps-900 transition hover:bg-alps-200"
+          >
+            今月へ
+          </button>
+        </div>
+      </div>
+
+      <!-- FY2027 reference banner (shown for 2027-04+) -->
+      <div
+        id="reference-forecast-banner"
+        class="hidden rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-relaxed text-sky-950"
+      >
+        <span class="font-bold">令和9年度（2027年4月以降）の参考予測を表示中：</span>
+        市公式の令和9年度イベント一覧は公開前のため、内閣府の国民の祝日・過去3年の月別入込統計・例年の繁忙期（GW・お盆等）のみを根拠に混雑傾向を表示しています。
+      </div>
+
+      <!-- Monthly Summary Bar -->
+      <div
+        id="month-summary-bar"
+        class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"
+      />
+
+      <div class="grid gap-6 lg:grid-cols-12">
+        <!-- Calendar Grid -->
+        <div class="lg:col-span-7">
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold">
+              <div class="py-1.5 text-rose-600">日</div>
+              <div class="py-1.5 text-slate-600">月</div>
+              <div class="py-1.5 text-slate-600">火</div>
+              <div class="py-1.5 text-slate-600">水</div>
+              <div class="py-1.5 text-slate-600">木</div>
+              <div class="py-1.5 text-slate-600">金</div>
+              <div class="py-1.5 text-sky-700">土</div>
+            </div>
+            <div id="calendar-grid" class="mt-1 grid grid-cols-7 gap-1.5" />
+
+            <!-- Legend -->
+            <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-600">
+              <span class="inline-flex items-center gap-1">
+                <span class="rounded bg-emerald-50 px-1.5 py-0.5 font-bold text-emerald-800 ring-1 ring-emerald-200">
+                  ◎
+                </span>
+                空き・狙い目 (0〜24)
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="rounded bg-sky-50 px-1.5 py-0.5 font-bold text-sky-800 ring-1 ring-sky-200">
+                  ○
+                </span>
+                やや混雑 (25〜49)
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="rounded bg-amber-50 px-1.5 py-0.5 font-bold text-amber-800 ring-1 ring-amber-200">
+                  △
+                </span>
+                混雑 (50〜74)
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="rounded bg-rose-50 px-1.5 py-0.5 font-bold text-rose-800 ring-1 ring-rose-200">
+                  ×
+                </span>
+                大混雑 (75〜100)
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-600 ring-1 ring-slate-300">
+                  休
+                </span>
+                休城日
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="inline-block h-2 w-2 rounded-full bg-alps-700" />
+                城イベント
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="inline-block h-2 w-2 rounded-full bg-violet-600" />
+                市街地イベント
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Day Detail Panel -->
+        <div class="lg:col-span-5">
+          <div
+            id="day-detail-panel"
+            class="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Nearby Cultural Exhibitions -->
+    <section
+      id="nearby-exhibitions-section"
+      aria-labelledby="exhibitions-heading"
+      class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 id="exhibitions-heading" class="text-lg font-bold text-slate-900">
+            この月にあわせて巡れる 周辺文化施設の企画展
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            松本市立博物館・松本市美術館・国宝旧開智学校・はかり資料館等の開催中企画展です（長期開催のため、松本城の混雑スコアには加算していません）。
+          </p>
+        </div>
+        <span
+          id="exhibitions-month-badge"
+          class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-alps-900 ring-1 ring-slate-200"
+        />
+      </div>
+      <div id="exhibitions-list" class="mt-4 grid gap-3 sm:grid-cols-2" />
+      <p
+        id="exhibitions-empty"
+        class="mt-4 hidden text-xs text-slate-500"
+      >
+        この月に収録されている令和8年度の周辺施設企画展はありません（2027年4月以降は未公開です）。
+      </p>
+    </section>
+
+    <!-- Annual Season Overview (1-12 Months Real Stats + Weather) -->
+    <section
+      aria-labelledby="season-overview-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h2 id="season-overview-heading" class="text-lg font-bold text-slate-900">
+            年間シーズン傾向（1〜12月 実測観覧者数・気候）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            過去3年（2023〜2025年）の月別観覧者数平均と直近10年（2014〜2023年）の気象平均です。月をクリックするとカレンダーへジャンプします。
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-5 space-y-2.5">
+        {dataset.monthlyStats.map((stat) => {
+          const widthPct = Math.max(
+            6,
+            Math.round((stat.avgVisitors / maxMonthlyVisitors) * 100),
+          );
+          const barColor =
+            stat.baselineScore >= 26
+              ? "bg-rose-500"
+              : stat.baselineScore >= 18
+                ? "bg-amber-500"
+                : stat.baselineScore >= 10
+                  ? "bg-sky-500"
+                  : "bg-emerald-500";
+          return (
+            <button
+              type="button"
+              data-jump-month={String(stat.month)}
+              class="group block w-full rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-left transition hover:border-alps-400 hover:bg-alps-50/60"
+            >
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex w-10 items-center justify-center rounded-lg bg-white py-0.5 text-xs font-bold text-alps-950 ring-1 ring-slate-200">
+                    {stat.month}月
+                  </span>
+                  <span class="text-xs font-semibold text-slate-800">
+                    {stat.seasonTag}
+                  </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-slate-600">
+                  <span class="font-semibold text-slate-900">
+                    平均 {stat.avgVisitors.toLocaleString("ja-JP")} 人
+                  </span>
+                  <span>
+                    （約 {stat.avgDailyVisitors.toLocaleString("ja-JP")} 人/日）
+                  </span>
+                  <span>平均気温 {stat.weather.meanTempC}℃</span>
+                  <span>降水量 {stat.weather.precipitationMm}mm</span>
+                </div>
+              </div>
+              <div class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-200/80">
+                <div
+                  class={`h-full rounded-full transition-all group-hover:opacity-90 ${barColor}`}
+                  style={`width: ${widthPct}%`}
+                />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  </div>
+
+  <script
+    id="castle-calendar-data"
+    type="application/json"
+    set:html={embeddedJson}
+  />
+
+  <script>
+    import type {
+      CalendarDay,
+      CastleEvent,
+      CrowdLevel,
+      MatsumotoCastleDataset,
+      MonthlyStat,
+    } from "@/lib/matsumoto-castle-schema";
+
+    const dataScript = document.getElementById("castle-calendar-data");
+    if (!dataScript?.textContent) {
+      throw new Error("Missing embedded castle calendar data");
+    }
+    const dataset: MatsumotoCastleDataset = JSON.parse(dataScript.textContent);
+
+    const dayByDate = new Map<string, CalendarDay>(
+      dataset.days.map((d) => [d.date, d]),
+    );
+    const eventById = new Map<string, CastleEvent>(
+      dataset.events.map((e) => [e.id, e]),
+    );
+    const statByMonth = new Map<number, MonthlyStat>(
+      dataset.monthlyStats.map((m) => [m.month, m]),
+    );
+    const exhibitions = dataset.events.filter(
+      (e) => e.scope === "nearby_exhibition",
+    );
+    const availableMonths = Array.from(
+      new Set(dataset.days.map((d) => d.date.slice(0, 7))),
+    ).sort();
+
+    const DOW_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
+
+    interface CrowdMeta {
+      symbol: string;
+      label: string;
+      badgeClass: string;
+      cellClass: string;
+      barClass: string;
+    }
+
+    const CROWD_META: Record<CrowdLevel, CrowdMeta> = {
+      low: {
+        symbol: "◎",
+        label: "空き・狙い目",
+        badgeClass:
+          "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200",
+        cellClass: "bg-emerald-50/55 border-emerald-200 hover:border-emerald-400",
+        barClass: "bg-emerald-500",
+      },
+      moderate: {
+        symbol: "○",
+        label: "やや混雑",
+        badgeClass: "bg-sky-50 text-sky-800 ring-1 ring-sky-200",
+        cellClass: "bg-sky-50/45 border-sky-200 hover:border-sky-400",
+        barClass: "bg-sky-500",
+      },
+      busy: {
+        symbol: "△",
+        label: "混雑",
+        badgeClass: "bg-amber-50 text-amber-800 ring-1 ring-amber-200",
+        cellClass: "bg-amber-50/55 border-amber-200 hover:border-amber-400",
+        barClass: "bg-amber-500",
+      },
+      very_busy: {
+        symbol: "×",
+        label: "大混雑",
+        badgeClass: "bg-rose-50 text-rose-800 ring-1 ring-rose-200",
+        cellClass: "bg-rose-50/60 border-rose-200 hover:border-rose-400",
+        barClass: "bg-rose-500",
+      },
+      closed: {
+        symbol: "休",
+        label: "休城日",
+        badgeClass: "bg-slate-100 text-slate-700 ring-1 ring-slate-300",
+        cellClass: "bg-slate-100/80 border-slate-200 hover:border-slate-400",
+        barClass: "bg-slate-400",
+      },
+    };
+
+    const PRECISION_LABELS = {
+      exact: "確定日程",
+      estimated: "例年目安",
+      tentative: "予定",
+    } as const;
+
+    const SCOPE_LABELS = {
+      castle: "松本城イベント",
+      downtown: "中心市街地イベント",
+      nearby_exhibition: "周辺文化施設",
+    } as const;
+
+    function getTodayTokyoYmd(): string {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Tokyo",
+      }).format(new Date());
+    }
+
+    function clampDateToDataset(ymd: string): string {
+      if (ymd < dataset.range.startDate) return dataset.range.startDate;
+      if (ymd > dataset.range.endDate) return dataset.range.endDate;
+      return ymd;
+    }
+
+    function addDaysYmd(ymd: string, deltaDays: number): string {
+      const [y, m, d] = ymd.split("-").map((n) => Number.parseInt(n, 10));
+      const dt = new Date(Date.UTC(y, m - 1, d + deltaDays));
+      const yy = dt.getUTCFullYear();
+      const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getUTCDate()).padStart(2, "0");
+      return `${yy}-${mm}-${dd}`;
+    }
+
+    function formatShortDateJa(ymd: string): string {
+      const day = dayByDate.get(ymd);
+      const m = Number.parseInt(ymd.slice(5, 7), 10);
+      const d = Number.parseInt(ymd.slice(8, 10), 10);
+      const dow = day ? DOW_LABELS[day.dayOfWeek] : "";
+      return `${m}月${d}日(${dow})`;
+    }
+
+    function formatFullDateJa(day: CalendarDay): string {
+      const y = day.date.slice(0, 4);
+      const m = Number.parseInt(day.date.slice(5, 7), 10);
+      const d = Number.parseInt(day.date.slice(8, 10), 10);
+      return `${y}年${m}月${d}日（${DOW_LABELS[day.dayOfWeek]}）`;
+    }
+
+    function el<K extends keyof HTMLElementTagNameMap>(
+      tag: K,
+      className?: string,
+      text?: string,
+    ): HTMLElementTagNameMap[K] {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    const realTodayYmd = getTodayTokyoYmd();
+    const initialDate = clampDateToDataset(realTodayYmd);
+    let currentMonth = initialDate.slice(0, 7);
+    let selectedDate = initialDate;
+    let goalMode: "avoid_crowd" | "with_event" = "avoid_crowd";
+    let dowFilter: "all" | "weekday" | "weekend_holiday" = "all";
+    let windowFilter: "next_30" | "current_month" | "next_90" = "next_30";
+
+    const goalButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-goal-btn]"),
+    );
+    const dowButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-dow-btn]"),
+    );
+    const windowButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-window-btn]"),
+    );
+    const jumpMonthButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-jump-month]"),
+    );
+
+    const monthSelect = document.getElementById(
+      "month-select",
+    ) as HTMLSelectElement | null;
+    const prevMonthBtn = document.getElementById(
+      "prev-month-btn",
+    ) as HTMLButtonElement | null;
+    const nextMonthBtn = document.getElementById(
+      "next-month-btn",
+    ) as HTMLButtonElement | null;
+    const todayJumpBtn = document.getElementById(
+      "today-jump-btn",
+    ) as HTMLButtonElement | null;
+
+    const finderAnchorNote = document.getElementById("finder-anchor-note");
+    const recommendationsGrid = document.getElementById("recommendations-grid");
+    const recommendationsEmpty = document.getElementById(
+      "recommendations-empty",
+    );
+    const referenceBanner = document.getElementById(
+      "reference-forecast-banner",
+    );
+    const monthSummaryBar = document.getElementById("month-summary-bar");
+    const calendarGrid = document.getElementById("calendar-grid");
+    const dayDetailPanel = document.getElementById("day-detail-panel");
+    const exhibitionsMonthBadge = document.getElementById(
+      "exhibitions-month-badge",
+    );
+    const exhibitionsList = document.getElementById("exhibitions-list");
+    const exhibitionsEmpty = document.getElementById("exhibitions-empty");
+
+    function updateFilterButtons(): void {
+      for (const btn of goalButtons) {
+        const active = btn.dataset.goalBtn === goalMode;
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.className = active
+          ? "rounded-xl bg-alps-900 px-3 py-2 text-xs font-semibold text-white transition"
+          : "rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+      for (const btn of dowButtons) {
+        const active = btn.dataset.dowBtn === dowFilter;
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.className = active
+          ? "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+      for (const btn of windowButtons) {
+        const active = btn.dataset.windowBtn === windowFilter;
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.className = active
+          ? "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function getAnchorDate(): string {
+      if (realTodayYmd <= dataset.range.endDate) {
+        return clampDateToDataset(realTodayYmd);
+      }
+      return `${currentMonth}-01`;
+    }
+
+    function renderRecommendations(): void {
+      if (!recommendationsGrid || !recommendationsEmpty) return;
+
+      const anchor = getAnchorDate();
+      let rangeStart = anchor;
+      let rangeEnd = clampDateToDataset(addDaysYmd(anchor, 29));
+      let windowText = `${formatShortDateJa(rangeStart)}〜${formatShortDateJa(rangeEnd)}`;
+
+      if (windowFilter === "next_90") {
+        rangeEnd = clampDateToDataset(addDaysYmd(anchor, 89));
+        windowText = `${formatShortDateJa(rangeStart)}〜${formatShortDateJa(rangeEnd)}`;
+      } else if (windowFilter === "current_month") {
+        const monthDays = dataset.days.filter((d) =>
+          d.date.startsWith(currentMonth),
+        );
+        if (monthDays.length > 0) {
+          rangeStart = monthDays[0].date;
+          rangeEnd = monthDays[monthDays.length - 1].date;
+          const y = currentMonth.slice(0, 4);
+          const m = Number.parseInt(currentMonth.slice(5, 7), 10);
+          windowText = `${y}年${m}月`;
+        }
+      }
+
+      if (finderAnchorNote) {
+        finderAnchorNote.textContent = `検索対象: ${windowText}`;
+      }
+
+      const candidates = dataset.days.filter((day) => {
+        if (day.date < rangeStart || day.date > rangeEnd) return false;
+        if (day.crowdLevel === "closed" || day.crowdScore === null) {
+          return false;
+        }
+        const isOff = day.isWeekend || day.holidayName !== null;
+        if (dowFilter === "weekday" && isOff) return false;
+        if (dowFilter === "weekend_holiday" && !isOff) return false;
+        if (goalMode === "with_event" && day.eventIds.length === 0) {
+          return false;
+        }
+        return true;
+      });
+
+      const sorted = [...candidates].sort((a, b) => {
+        if (goalMode === "avoid_crowd") {
+          const diff = (a.crowdScore ?? 100) - (b.crowdScore ?? 100);
+          return diff !== 0 ? diff : a.date.localeCompare(b.date);
+        }
+        const aHasCastle = a.eventIds.some(
+          (id) => eventById.get(id)?.scope === "castle",
+        );
+        const bHasCastle = b.eventIds.some(
+          (id) => eventById.get(id)?.scope === "castle",
+        );
+        if (aHasCastle !== bHasCastle) return aHasCastle ? -1 : 1;
+        return a.date.localeCompare(b.date);
+      });
+
+      const picks = sorted.slice(0, 6);
+      recommendationsGrid.replaceChildren();
+
+      if (picks.length === 0) {
+        recommendationsEmpty.replaceChildren();
+        recommendationsEmpty.classList.remove("hidden");
+        if (goalMode === "with_event" && rangeStart > dataset.range.eventsCoveredUntil) {
+          recommendationsEmpty.appendChild(
+            el(
+              "p",
+              "font-semibold text-slate-800",
+              "選択中の期間（2027年4月以降）は市イベント一覧が未公開のため、イベント開催日を抽出できません。",
+            ),
+          );
+          const jumpBtn = el(
+            "button",
+            "mt-3 inline-flex items-center rounded-lg bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-alps-800",
+            "イベント収録中の2027年1月（氷彫フェス・あめ市）を見る",
+          );
+          jumpBtn.type = "button";
+          jumpBtn.addEventListener("click", () => {
+            windowFilter = "current_month";
+            updateFilterButtons();
+            selectMonthAndDate("2027-01", "2027-01-22", true);
+          });
+          recommendationsEmpty.appendChild(jumpBtn);
+        } else {
+          recommendationsEmpty.appendChild(
+            el(
+              "p",
+              "font-semibold text-slate-800",
+              "この期間・曜日条件に一致する候補日が見つかりませんでした。",
+            ),
+          );
+          recommendationsEmpty.appendChild(
+            el(
+              "p",
+              "mt-1 text-slate-500",
+              "「今後90日間」や「いつでも」へ条件を広げてお試しください。",
+            ),
+          );
+        }
+        return;
+      }
+
+      recommendationsEmpty.classList.add("hidden");
+      for (const day of picks) {
+        const meta = CROWD_META[day.crowdLevel];
+        const card = el(
+          "button",
+          "flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-alps-400 hover:shadow-sm",
+        );
+        card.type = "button";
+
+        const top = el("div", "flex items-start justify-between gap-2");
+        const dateWrap = el("div");
+        dateWrap.appendChild(
+          el("p", "text-sm font-bold text-slate-900", formatShortDateJa(day.date)),
+        );
+        if (day.holidayName) {
+          dateWrap.appendChild(
+            el("p", "text-[11px] font-semibold text-rose-600", day.holidayName),
+          );
+        }
+        top.appendChild(dateWrap);
+
+        const badge = el(
+          "span",
+          `shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.badgeClass}`,
+          `${meta.symbol} ${meta.label} (${day.crowdScore})`,
+        );
+        top.appendChild(badge);
+        card.appendChild(top);
+
+        const detailText =
+          goalMode === "with_event"
+            ? day.eventIds
+                .map((id) => eventById.get(id)?.name ?? "")
+                .filter(Boolean)
+                .join(" / ")
+            : (day.advice[0] ?? `開場 ${day.hoursLabel}`);
+
+        card.appendChild(
+          el("p", "mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600", detailText),
+        );
+
+        const bottom = el(
+          "div",
+          "mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-slate-500",
+        );
+        bottom.appendChild(el("span", undefined, `開場 ${day.hoursLabel}`));
+        bottom.appendChild(
+          el("span", "font-semibold text-alps-700", "詳細を見る →"),
+        );
+        card.appendChild(bottom);
+
+        card.addEventListener("click", () => {
+          selectMonthAndDate(day.date.slice(0, 7), day.date, true);
+        });
+        recommendationsGrid.appendChild(card);
+      }
+    }
+
+    function renderMonthSummary(): void {
+      if (!monthSummaryBar) return;
+      const year = currentMonth.slice(0, 4);
+      const month = Number.parseInt(currentMonth.slice(5, 7), 10);
+      const stat = statByMonth.get(month);
+      if (!stat) return;
+
+      monthSummaryBar.replaceChildren();
+
+      const header = el(
+        "div",
+        "flex flex-wrap items-center justify-between gap-2",
+      );
+      const titleGroup = el("div", "flex flex-wrap items-center gap-2");
+      titleGroup.appendChild(
+        el("h3", "text-base font-bold text-alps-950", `${year}年${month}月の傾向`),
+      );
+      titleGroup.appendChild(
+        el(
+          "span",
+          "rounded-full bg-alps-100 px-2.5 py-0.5 text-xs font-semibold text-alps-900",
+          stat.seasonTag,
+        ),
+      );
+      header.appendChild(titleGroup);
+      header.appendChild(
+        el(
+          "span",
+          "text-xs text-slate-500",
+          `2023〜2025年平均 ${stat.avgVisitors.toLocaleString("ja-JP")}人/月（約${stat.avgDailyVisitors.toLocaleString("ja-JP")}人/日）`,
+        ),
+      );
+      monthSummaryBar.appendChild(header);
+
+      const grid = el(
+        "div",
+        "mt-3 grid gap-3 border-t border-slate-100 pt-3 text-xs sm:grid-cols-3",
+      );
+
+      const visitorsBox = el("div");
+      visitorsBox.appendChild(
+        el("p", "font-medium text-slate-500", "過去3年の観覧者数実測"),
+      );
+      visitorsBox.appendChild(
+        el(
+          "p",
+          "mt-0.5 font-mono text-slate-800",
+          `23年 ${stat.yearlyVisitors.y2023.toLocaleString("ja-JP")} / 24年 ${stat.yearlyVisitors.y2024.toLocaleString("ja-JP")} / 25年 ${stat.yearlyVisitors.y2025.toLocaleString("ja-JP")}`,
+        ),
+      );
+      grid.appendChild(visitorsBox);
+
+      const weatherBox = el("div");
+      weatherBox.appendChild(
+        el("p", "font-medium text-slate-500", "気候目安（2014〜2023年平均）"),
+      );
+      weatherBox.appendChild(
+        el(
+          "p",
+          "mt-0.5 font-mono text-slate-800",
+          `平均 ${stat.weather.meanTempC}℃（最高 ${stat.weather.maxTempC}℃ / 最低 ${stat.weather.minTempC}℃）・降水量 ${stat.weather.precipitationMm}mm`,
+        ),
+      );
+      grid.appendChild(weatherBox);
+
+      const tipBox = el("div");
+      tipBox.appendChild(el("p", "font-medium text-slate-500", "季節のひとこと"));
+      tipBox.appendChild(
+        el("p", "mt-0.5 leading-relaxed text-slate-700", stat.seasonTip),
+      );
+      grid.appendChild(tipBox);
+
+      monthSummaryBar.appendChild(grid);
+    }
+
+    function renderCalendarGrid(): void {
+      if (!calendarGrid) return;
+      calendarGrid.replaceChildren();
+
+      const monthDays = dataset.days.filter((d) =>
+        d.date.startsWith(currentMonth),
+      );
+      if (monthDays.length === 0) return;
+
+      const leadingBlank = monthDays[0].dayOfWeek;
+      for (let i = 0; i < leadingBlank; i++) {
+        const blank = el("div", "min-h-[68px] rounded-xl bg-slate-50/50");
+        blank.setAttribute("aria-hidden", "true");
+        calendarGrid.appendChild(blank);
+      }
+
+      for (const day of monthDays) {
+        const meta = CROWD_META[day.crowdLevel];
+        const isSelected = day.date === selectedDate;
+        const isToday = day.date === realTodayYmd;
+        const dayNum = Number.parseInt(day.date.slice(8, 10), 10);
+
+        const btn = el(
+          "button",
+          [
+            "relative flex min-h-[68px] flex-col justify-between rounded-xl border p-1.5 text-left transition sm:min-h-[78px] sm:p-2",
+            meta.cellClass,
+            isSelected
+              ? "ring-2 ring-alps-950 ring-offset-1"
+              : isToday
+                ? "ring-2 ring-alps-500"
+                : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+        btn.type = "button";
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.setAttribute(
+          "aria-label",
+          `${formatFullDateJa(day)} ${day.holidayName ?? ""} ${meta.label}${day.crowdScore !== null ? ` スコア${day.crowdScore}` : ""}`,
+        );
+
+        const topRow = el("div", "flex items-center justify-between gap-1");
+        const numColor =
+          day.holidayName || day.dayOfWeek === 0
+            ? "text-rose-700"
+            : day.dayOfWeek === 6
+              ? "text-sky-700"
+              : "text-slate-900";
+        topRow.appendChild(el("span", `text-xs font-bold sm:text-sm ${numColor}`, String(dayNum)));
+
+        const dotWrap = el("span", "flex items-center gap-0.5");
+        const hasCastleEv = day.eventIds.some(
+          (id) => eventById.get(id)?.scope === "castle",
+        );
+        const hasDowntownEv = day.eventIds.some(
+          (id) => eventById.get(id)?.scope === "downtown",
+        );
+        if (hasCastleEv) {
+          dotWrap.appendChild(
+            el("span", "inline-block h-2 w-2 rounded-full bg-alps-700"),
+          );
+        }
+        if (hasDowntownEv) {
+          dotWrap.appendChild(
+            el("span", "inline-block h-2 w-2 rounded-full bg-violet-600"),
+          );
+        }
+        topRow.appendChild(dotWrap);
+        btn.appendChild(topRow);
+
+        if (day.holidayName) {
+          btn.appendChild(
+            el(
+              "span",
+              "truncate text-[9px] font-medium text-rose-700 sm:text-[10px]",
+              day.holidayName,
+            ),
+          );
+        } else if (isToday) {
+          btn.appendChild(
+            el(
+              "span",
+              "text-[9px] font-bold text-alps-800 sm:text-[10px]",
+              "今日",
+            ),
+          );
+        }
+
+        const bottomRow = el("div", "mt-auto flex items-center justify-between");
+        bottomRow.appendChild(
+          el(
+            "span",
+            `inline-flex items-center rounded px-1 py-0.5 text-[10px] font-bold ${meta.badgeClass}`,
+            meta.symbol,
+          ),
+        );
+        if (day.crowdScore !== null) {
+          bottomRow.appendChild(
+            el(
+              "span",
+              "hidden font-mono text-[10px] text-slate-600 sm:inline",
+              String(day.crowdScore),
+            ),
+          );
+        }
+        btn.appendChild(bottomRow);
+
+        btn.addEventListener("click", () => {
+          selectedDate = day.date;
+          renderCalendarGrid();
+          renderDayDetail();
+        });
+
+        calendarGrid.appendChild(btn);
+      }
+    }
+
+    function renderDayDetail(): void {
+      if (!dayDetailPanel) return;
+      const day = dayByDate.get(selectedDate);
+      if (!day) return;
+
+      dayDetailPanel.replaceChildren();
+      const meta = CROWD_META[day.crowdLevel];
+
+      // Header
+      const header = el("div", "border-b border-slate-100 pb-4");
+      const badges = el("div", "flex flex-wrap items-center gap-1.5");
+      badges.appendChild(
+        el(
+          "span",
+          `rounded-full px-2.5 py-0.5 text-xs font-bold ${meta.badgeClass}`,
+          `${meta.symbol} ${meta.label}`,
+        ),
+      );
+      if (day.holidayName) {
+        badges.appendChild(
+          el(
+            "span",
+            "rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200",
+            `祝日: ${day.holidayName}`,
+          ),
+        );
+      }
+      if (day.isLongWeekend) {
+        badges.appendChild(
+          el(
+            "span",
+            "rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200",
+            "連休期間",
+          ),
+        );
+      }
+      badges.appendChild(
+        el(
+          "span",
+          day.dataCoverage === "events_included"
+            ? "rounded-full bg-alps-50 px-2.5 py-0.5 text-[11px] font-medium text-alps-800"
+            : "rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-800",
+          day.dataCoverage === "events_included"
+            ? "公式イベント反映"
+            : "統計・祝日参考予測",
+        ),
+      );
+      header.appendChild(badges);
+      header.appendChild(
+        el("h3", "mt-2.5 text-xl font-bold text-slate-900", formatFullDateJa(day)),
+      );
+      dayDetailPanel.appendChild(header);
+
+      // Score + Breakdown
+      const scoreBox = el("div", "mt-4 rounded-xl bg-slate-50 p-4");
+      if (day.crowdScore !== null) {
+        const scoreRow = el("div", "flex items-baseline justify-between");
+        scoreRow.appendChild(
+          el("span", "text-xs font-semibold text-slate-600", "混雑度目安スコア"),
+        );
+        scoreRow.appendChild(
+          el(
+            "span",
+            "font-mono text-base font-bold text-slate-900",
+            `${day.crowdScore} / 100`,
+          ),
+        );
+        scoreBox.appendChild(scoreRow);
+
+        const track = el(
+          "div",
+          "mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-200",
+        );
+        const fill = el("div", `h-full rounded-full transition-all ${meta.barClass}`);
+        fill.style.width = `${Math.max(4, day.crowdScore)}%`;
+        track.appendChild(fill);
+        scoreBox.appendChild(track);
+
+        if (day.factors.length > 0) {
+          scoreBox.appendChild(
+            el("p", "mt-3 text-[11px] font-semibold text-slate-500", "スコア算出内訳"),
+          );
+          const list = el("ul", "mt-1.5 space-y-1 text-xs text-slate-700");
+          for (const f of day.factors) {
+            const li = el("li", "flex items-center justify-between gap-2");
+            li.appendChild(el("span", undefined, f.label));
+            li.appendChild(
+              el(
+                "span",
+                "shrink-0 font-mono font-semibold text-slate-900",
+                `+${f.points}点`,
+              ),
+            );
+            list.appendChild(li);
+          }
+          scoreBox.appendChild(list);
+        }
+      } else {
+        scoreBox.appendChild(
+          el(
+            "p",
+            "text-sm font-bold text-slate-800",
+            "年末休城日のため観覧できません",
+          ),
+        );
+      }
+      dayDetailPanel.appendChild(scoreBox);
+
+      // Opening Hours
+      const hoursBox = el(
+        "div",
+        "mt-4 rounded-xl border border-slate-200 px-4 py-3 text-xs",
+      );
+      hoursBox.appendChild(
+        el("p", "font-semibold text-slate-500", "松本城 開場時間"),
+      );
+      hoursBox.appendChild(
+        el("p", "mt-1 text-sm font-bold text-slate-900", day.hoursLabel),
+      );
+      if (day.lastEntryLabel) {
+        hoursBox.appendChild(
+          el(
+            "p",
+            "mt-0.5 text-slate-600",
+            `最終入場 ${day.lastEntryLabel} まで（天守内の観覧所要目安 45〜60分）`,
+          ),
+        );
+      }
+      dayDetailPanel.appendChild(hoursBox);
+
+      // Events on this day
+      const eventsSec = el("div", "mt-5");
+      eventsSec.appendChild(
+        el(
+          "h4",
+          "text-xs font-bold tracking-wider text-alps-800 uppercase",
+          "当日の松本城・中心市街地イベント",
+        ),
+      );
+      if (day.dataCoverage === "stats_and_holidays_only") {
+        eventsSec.appendChild(
+          el(
+            "p",
+            "mt-2 rounded-xl border border-dashed border-sky-200 bg-sky-50/50 p-3 text-xs text-sky-900",
+            "令和9年度（2027年4月以降）の市イベント一覧はまだ公開されていません。最新の行事予定は公式サイトをご確認ください。",
+          ),
+        );
+      } else if (day.eventIds.length === 0) {
+        eventsSec.appendChild(
+          el(
+            "p",
+            "mt-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600",
+            "この日に予定されている松本城内・中心市街地の大型イベントはありません。",
+          ),
+        );
+      } else {
+        const evList = el("div", "mt-2 space-y-2.5");
+        for (const id of day.eventIds) {
+          const ev = eventById.get(id);
+          if (!ev) continue;
+          const card = el(
+            "div",
+            "rounded-xl border border-slate-200 bg-white p-3.5 text-xs",
+          );
+          const evBadges = el("div", "flex flex-wrap items-center gap-1.5");
+          evBadges.appendChild(
+            el(
+              "span",
+              ev.scope === "castle"
+                ? "rounded bg-alps-100 px-2 py-0.5 text-[11px] font-semibold text-alps-900"
+                : "rounded bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900",
+              SCOPE_LABELS[ev.scope],
+            ),
+          );
+          evBadges.appendChild(
+            el(
+              "span",
+              "rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700",
+              PRECISION_LABELS[ev.datePrecision],
+            ),
+          );
+          if (ev.isNightEvent) {
+            evBadges.appendChild(
+              el(
+                "span",
+                "rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-800",
+                "夜間開催",
+              ),
+            );
+          }
+          card.appendChild(evBadges);
+          card.appendChild(
+            el("p", "mt-1.5 text-sm font-bold text-slate-900", ev.name),
+          );
+          card.appendChild(
+            el("p", "mt-1 text-slate-600", `期間・日時: ${ev.dateNote}`),
+          );
+          card.appendChild(
+            el("p", "mt-0.5 text-slate-600", `会場: ${ev.venue}`),
+          );
+          if (ev.summary) {
+            card.appendChild(
+              el("p", "mt-1.5 leading-relaxed text-slate-700", ev.summary),
+            );
+          }
+          if (ev.trafficNote) {
+            card.appendChild(
+              el(
+                "p",
+                "mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900",
+                ev.trafficNote,
+              ),
+            );
+          }
+          if (ev.officialUrl) {
+            const link = el(
+              "a",
+              "mt-2 inline-flex items-center font-semibold text-alps-700 underline underline-offset-2 hover:text-alps-900",
+              "公式情報を見る ↗",
+            );
+            link.href = ev.officialUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            card.appendChild(link);
+          }
+          evList.appendChild(card);
+        }
+        eventsSec.appendChild(evList);
+      }
+      dayDetailPanel.appendChild(eventsSec);
+
+      // Advice
+      if (day.advice.length > 0) {
+        const advSec = el("div", "mt-5");
+        advSec.appendChild(
+          el(
+            "h4",
+            "text-xs font-bold tracking-wider text-alps-800 uppercase",
+            "この日の訪問アドバイス",
+          ),
+        );
+        const ul = el("ul", "mt-2 space-y-1.5 text-xs leading-relaxed text-slate-700");
+        for (const tip of day.advice) {
+          const li = el("li", "flex gap-2");
+          li.appendChild(el("span", "font-bold text-alps-700", "•"));
+          li.appendChild(el("span", undefined, tip));
+          ul.appendChild(li);
+        }
+        advSec.appendChild(ul);
+        dayDetailPanel.appendChild(advSec);
+      }
+    }
+
+    function renderNearbyExhibitions(): void {
+      if (!exhibitionsList || !exhibitionsEmpty || !exhibitionsMonthBadge) {
+        return;
+      }
+      const year = Number.parseInt(currentMonth.slice(0, 4), 10);
+      const month = Number.parseInt(currentMonth.slice(5, 7), 10);
+      const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      const monthStart = `${currentMonth}-01`;
+      const monthEnd = `${currentMonth}-${String(lastDay).padStart(2, "0")}`;
+
+      exhibitionsMonthBadge.textContent = `${year}年${month}月`;
+      const active = exhibitions.filter(
+        (ev) => ev.startDate <= monthEnd && ev.endDate >= monthStart,
+      );
+
+      exhibitionsList.replaceChildren();
+      if (active.length === 0) {
+        exhibitionsEmpty.classList.remove("hidden");
+        return;
+      }
+      exhibitionsEmpty.classList.add("hidden");
+
+      for (const ev of active) {
+        const card = el(
+          "article",
+          "rounded-xl border border-slate-200 bg-white p-4 text-xs",
+        );
+        const top = el("div", "flex flex-wrap items-center justify-between gap-2");
+        top.appendChild(
+          el(
+            "span",
+            "rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700",
+            ev.venue,
+          ),
+        );
+        top.appendChild(
+          el(
+            "span",
+            "text-[11px] text-slate-500",
+            PRECISION_LABELS[ev.datePrecision],
+          ),
+        );
+        card.appendChild(top);
+        card.appendChild(el("h3", "mt-2 text-sm font-bold text-slate-900", ev.name));
+        card.appendChild(el("p", "mt-1 text-slate-600", `会期: ${ev.dateNote}`));
+        if (ev.summary) {
+          card.appendChild(
+            el("p", "mt-1.5 leading-relaxed text-slate-600", ev.summary),
+          );
+        }
+        if (ev.officialUrl) {
+          const link = el(
+            "a",
+            "mt-2 inline-flex items-center font-semibold text-alps-700 underline underline-offset-2 hover:text-alps-900",
+            "施設・展示情報 ↗",
+          );
+          link.href = ev.officialUrl;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          card.appendChild(link);
+        }
+        exhibitionsList.appendChild(card);
+      }
+    }
+
+    function updateMonthNavState(): void {
+      if (monthSelect) monthSelect.value = currentMonth;
+      const idx = availableMonths.indexOf(currentMonth);
+      if (prevMonthBtn) prevMonthBtn.disabled = idx <= 0;
+      if (nextMonthBtn) {
+        nextMonthBtn.disabled = idx === -1 || idx >= availableMonths.length - 1;
+      }
+      referenceBanner?.classList.toggle(
+        "hidden",
+        currentMonth <= dataset.range.eventsCoveredUntil.slice(0, 7),
+      );
+    }
+
+    function selectMonthAndDate(
+      targetMonth: string,
+      targetDate?: string,
+      scrollToDetail = false,
+    ): void {
+      if (!availableMonths.includes(targetMonth)) return;
+      currentMonth = targetMonth;
+      if (targetDate && dayByDate.has(targetDate)) {
+        selectedDate = targetDate;
+      } else {
+        const monthDays = dataset.days.filter((d) =>
+          d.date.startsWith(currentMonth),
+        );
+        selectedDate = monthDays[0]?.date ?? selectedDate;
+      }
+      updateMonthNavState();
+      renderMonthSummary();
+      renderCalendarGrid();
+      renderDayDetail();
+      renderNearbyExhibitions();
+      if (windowFilter === "current_month") {
+        renderRecommendations();
+      }
+      if (scrollToDetail) {
+        const target =
+          window.innerWidth >= 1024
+            ? document.getElementById("calendar-section")
+            : dayDetailPanel;
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    for (const btn of goalButtons) {
+      btn.addEventListener("click", () => {
+        const mode = btn.dataset.goalBtn;
+        if (mode === "avoid_crowd" || mode === "with_event") {
+          goalMode = mode;
+          updateFilterButtons();
+          renderRecommendations();
+        }
+      });
+    }
+
+    for (const btn of dowButtons) {
+      btn.addEventListener("click", () => {
+        const dow = btn.dataset.dowBtn;
+        if (dow === "all" || dow === "weekday" || dow === "weekend_holiday") {
+          dowFilter = dow;
+          updateFilterButtons();
+          renderRecommendations();
+        }
+      });
+    }
+
+    for (const btn of windowButtons) {
+      btn.addEventListener("click", () => {
+        const win = btn.dataset.windowBtn;
+        if (win === "next_30" || win === "current_month" || win === "next_90") {
+          windowFilter = win;
+          updateFilterButtons();
+          renderRecommendations();
+        }
+      });
+    }
+
+    monthSelect?.addEventListener("change", () => {
+      selectMonthAndDate(monthSelect.value);
+    });
+
+    prevMonthBtn?.addEventListener("click", () => {
+      const idx = availableMonths.indexOf(currentMonth);
+      if (idx > 0) selectMonthAndDate(availableMonths[idx - 1]);
+    });
+
+    nextMonthBtn?.addEventListener("click", () => {
+      const idx = availableMonths.indexOf(currentMonth);
+      if (idx !== -1 && idx < availableMonths.length - 1) {
+        selectMonthAndDate(availableMonths[idx + 1]);
+      }
+    });
+
+    todayJumpBtn?.addEventListener("click", () => {
+      const todayClamped = clampDateToDataset(realTodayYmd);
+      selectMonthAndDate(todayClamped.slice(0, 7), todayClamped);
+    });
+
+    for (const btn of jumpMonthButtons) {
+      btn.addEventListener("click", () => {
+        const monthNum = Number.parseInt(btn.dataset.jumpMonth ?? "0", 10);
+        if (monthNum < 1 || monthNum > 12) return;
+        const mm = String(monthNum).padStart(2, "0");
+        const anchorMonth = initialDate.slice(0, 7);
+        const matchingMonths = availableMonths.filter((m) =>
+          m.endsWith(`-${mm}`),
+        );
+        const chosen =
+          matchingMonths.find((m) => m >= anchorMonth) ?? matchingMonths[0];
+        if (chosen) {
+          const defaultDate =
+            chosen === initialDate.slice(0, 7) ? initialDate : `${chosen}-01`;
+          selectMonthAndDate(chosen, defaultDate);
+          document
+            .getElementById("calendar-section")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    }
+
+    updateFilterButtons();
+    updateMonthNavState();
+    renderMonthSummary();
+    renderCalendarGrid();
+    renderDayDetail();
+    renderNearbyExhibitions();
+    renderRecommendations();
+  </script>
+</BaseLayout>

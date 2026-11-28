@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-weather-stats",
+  "name": "松本市 気象実況（月別統計）",
+  "provider": "松本市（DX推進本部）",
+  "description": "松本市の月別平均気温・最高気温・最低気温・総降水量・日照時間などの気象観測データ。",
+  "sourceUrl": "http://linkdata.org/work/rdf1s8695i",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市 DX推進本部「松本市 気象実況（matsumoto_kisho）」（クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+  "format": ["TSV", "Excel", "RDF/Turtle"],
+  "updateFrequency": "年次更新",
+  "updatedAt": "2026-11-28",
+  "notes": "2000〜2023年の月別観測値のうち直近10年間（2014〜2023年）の平均値を算出し、季節ごとの気候・服装ガイドに利用しています。"
+}

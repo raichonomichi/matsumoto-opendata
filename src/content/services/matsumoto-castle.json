@@ -1,0 +1,16 @@
+{
+  "id": "matsumoto-castle",
+  "title": "松本城いつ行く？カレンダー",
+  "summary": "混雑やイベントを避けて松本城へ行く狙い目の日を提案。松本城・市街地イベント、過去3年の月別入込統計、気象データ、祝日から日ごとの混雑傾向と開場時間を確認できます。",
+  "status": "published",
+  "path": "/matsumoto-castle/",
+  "datasets": [
+    "matsumoto-events-fy2026",
+    "matsumoto-tourism-monthly",
+    "matsumoto-weather-stats",
+    "cao-national-holidays"
+  ],
+  "tags": ["松本城", "混雑予想", "イベント", "観光計画"],
+  "publishedAt": "2026-11-28",
+  "issueUrl": "https://github.com/raichonomichi/matsumoto-opendata/issues/6"
+}
