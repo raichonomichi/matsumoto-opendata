@@ -868,6 +868,13 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
 
   <script>
     import {
+      compareSentouFacilities,
+      formatBathDistanceBadge,
+      matchesSentouFiltersWithoutTab,
+      type SentouFilterableFacility,
+      type SentouTabKey,
+    } from "@/lib/sentou-client";
+    import {
       type BathAvailability,
       buildTargetDateForPreset,
       evaluateBathAvailability,
@@ -875,38 +882,10 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
       haversineDistanceKm,
       type TimePreset,
     } from "@/lib/sentou-schedule";
-    import type {
-      BathAccessCategory,
-      BathAreaGroup,
-      BathSchedule,
-      BathWaterType,
-    } from "@/lib/sentou-schema";
+    import type { BathAreaGroup } from "@/lib/sentou-schema";
 
-    type TabKey =
-      | "public_drop_in"
-      | "day_use_or_reserved"
-      | "restricted"
-      | "all";
-
-    interface ClientFacility {
-      id: string;
-      tabGroup: string;
-      accessCategory: BathAccessCategory;
-      permitCategory: "一般公衆浴場" | "その他の公衆浴場";
-      permittedAt: string;
-      areaGroup: BathAreaGroup;
-      waterType: BathWaterType;
-      hasSauna: boolean;
-      hasRotenburo: boolean;
-      hasMorningBath: boolean;
-      openLateNight: boolean;
-      latestLastEntryMinutes: number | null;
-      lat: number | null;
-      lng: number | null;
-      recommendedRank: number;
-      schedule: BathSchedule;
-      searchText: string;
-    }
+    type TabKey = SentouTabKey;
+    type ClientFacility = SentouFilterableFacility;
 
     interface EmbeddedPayload {
       holidays: Record<string, string>;
@@ -986,14 +965,6 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
         "mt-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-xs",
       not_public:
         "mt-3 rounded-xl border border-rose-200 bg-rose-50/60 px-3.5 py-2.5 text-xs",
-    };
-
-    const STATUS_SORT_WEIGHT: Record<BathAvailability["status"], number> = {
-      open_now: 0,
-      opening_later_today: 1,
-      check_official: 2,
-      closed_today: 3,
-      not_public: 4,
     };
 
     const WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"];
@@ -1175,10 +1146,7 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
             );
             if (distBadge) {
               if (km !== undefined) {
-                distBadge.textContent =
-                  km < 1
-                    ? `現在地から 約${Math.round(km * 1000)}m`
-                    : `現在地から 約${km.toFixed(1)}km`;
+                distBadge.textContent = formatBathDistanceBadge(km);
                 distBadge.classList.remove("hidden");
               } else {
                 distBadge.classList.add("hidden");
@@ -1212,73 +1180,19 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
       );
     }
 
-    function matchesFiltersWithoutTab(
-      f: ClientFacility,
-      keyword: string,
-    ): boolean {
-      if (selectedArea !== "all" && f.areaGroup !== selectedArea) return false;
-      if (keyword !== "" && !f.searchText.includes(keyword)) return false;
-
-      if (activeQuickFilters.has("can-enter-today")) {
-        const av = availabilities.get(f.id);
-        if (!av || !av.canEnterToday) return false;
-      }
-      if (activeQuickFilters.has("open-now")) {
-        const av = availabilities.get(f.id);
-        if (!av || av.status !== "open_now") return false;
-      }
-      if (activeQuickFilters.has("onsen") && f.waterType !== "onsen") {
-        return false;
-      }
-      if (
-        activeQuickFilters.has("sentou") &&
-        f.permitCategory !== "一般公衆浴場"
-      ) {
-        return false;
-      }
-      if (activeQuickFilters.has("sauna") && !f.hasSauna) return false;
-      if (activeQuickFilters.has("rotenburo") && !f.hasRotenburo) return false;
-      if (activeQuickFilters.has("morning-bath") && !f.hasMorningBath) {
-        return false;
-      }
-      if (activeQuickFilters.has("late-night") && !f.openLateNight) {
-        return false;
-      }
-      return true;
-    }
-
     function applyFilterAndSort(): void {
-      const keyword = (keywordInput?.value ?? "").trim().toLowerCase();
+      const keyword = keywordInput?.value ?? "";
       const sortBy = sortSelect?.value ?? "available_first";
 
       const sortedCards = [...cards].sort((a, b) => {
         const fA = facilityById.get(a.dataset.facilityId ?? "");
         const fB = facilityById.get(b.dataset.facilityId ?? "");
         if (!fA || !fB) return 0;
-
-        if (sortBy === "available_first") {
-          const avA = availabilities.get(fA.id);
-          const avB = availabilities.get(fB.id);
-          const wA = avA ? STATUS_SORT_WEIGHT[avA.status] : 9;
-          const wB = avB ? STATUS_SORT_WEIGHT[avB.status] : 9;
-          if (wA !== wB) return wA - wB;
-        } else if (sortBy === "distance" && userLocation) {
-          const dA = distanceMap.get(fA.id) ?? Number.MAX_SAFE_INTEGER;
-          const dB = distanceMap.get(fB.id) ?? Number.MAX_SAFE_INTEGER;
-          if (dA !== dB) return dA - dB;
-        } else if (sortBy === "last_entry_desc") {
-          const lA = fA.latestLastEntryMinutes ?? -1;
-          const lB = fB.latestLastEntryMinutes ?? -1;
-          if (lB !== lA) return lB - lA;
-        } else if (sortBy === "permitted_desc") {
-          const cmp = fB.permittedAt.localeCompare(fA.permittedAt);
-          if (cmp !== 0) return cmp;
-        }
-
-        if (fA.recommendedRank !== fB.recommendedRank) {
-          return fA.recommendedRank - fB.recommendedRank;
-        }
-        return fA.id.localeCompare(fB.id);
+        return compareSentouFacilities(fA, fB, sortBy, {
+          availabilities,
+          distanceMap,
+          hasUserLocation: userLocation !== null,
+        });
       });
 
       let visibleCount = 0;
@@ -1288,7 +1202,15 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
         const f = facilityById.get(card.dataset.facilityId ?? "");
         if (!f) continue;
 
-        const nonTabOk = matchesFiltersWithoutTab(f, keyword);
+        const nonTabOk = matchesSentouFiltersWithoutTab(
+          f,
+          {
+            selectedArea,
+            keyword,
+            activeQuickFilters,
+          },
+          availabilities,
+        );
         if (nonTabOk) allTabMatchCount++;
 
         const tabOk = activeTab === "all" || f.tabGroup === activeTab;

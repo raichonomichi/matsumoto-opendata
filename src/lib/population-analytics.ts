@@ -536,3 +536,70 @@ export function findDecadeTrendGroupForBand(band: AgeBandRow): string {
   const decadeStart = Math.floor(band.minAge / 10) * 10;
   return `${decadeStart}-${decadeStart + 9}`;
 }
+
+/**
+ * 正の最大値からグラフ軸に収まりの良い切りのよい上限値を算出する。
+ */
+export function computeNiceMax(rawMax: number): number {
+  if (rawMax <= 0) return 10;
+  const magnitude = 10 ** Math.floor(Math.log10(rawMax));
+  const norm = rawMax / magnitude;
+  let step = 1;
+  if (norm <= 1.2) step = 1.2;
+  else if (norm <= 1.5) step = 1.5;
+  else if (norm <= 2) step = 2;
+  else if (norm <= 2.5) step = 2.5;
+  else if (norm <= 3) step = 3;
+  else if (norm <= 4) step = 4;
+  else if (norm <= 5) step = 5;
+  else if (norm <= 6) step = 6;
+  else if (norm <= 8) step = 8;
+  else step = 10;
+  return Math.ceil(step * magnitude);
+}
+
+/**
+ * 推移グラフの最小値・最大値から軸の下限・上限・目盛配列を算出する。
+ */
+export function computeNiceRange(
+  minVal: number,
+  maxVal: number,
+  isPercent = false,
+): {
+  min: number;
+  max: number;
+  ticks: number[];
+} {
+  if (minVal === maxVal) {
+    const pad = isPercent ? 2 : Math.max(100, Math.round(maxVal * 0.1));
+    const min = Math.max(0, minVal - pad);
+    const max = maxVal + pad;
+    const step = (max - min) / 4;
+    return {
+      min,
+      max,
+      ticks: [0, 1, 2, 3, 4].map((i) => min + step * i),
+    };
+  }
+
+  const span = maxVal - minVal;
+  const rawStep = span / 4;
+  const mag = 10 ** Math.floor(Math.log10(rawStep));
+  const norm = rawStep / mag;
+  let niceStep = mag;
+  if (norm <= 1) niceStep = 1 * mag;
+  else if (norm <= 2) niceStep = 2 * mag;
+  else if (norm <= 2.5) niceStep = 2.5 * mag;
+  else if (norm <= 5) niceStep = 5 * mag;
+  else niceStep = 10 * mag;
+
+  const padding = span * 0.12;
+  const min = Math.max(0, Math.floor((minVal - padding) / niceStep) * niceStep);
+  const max = Math.ceil((maxVal + padding) / niceStep) * niceStep;
+  const tickCount = Math.max(2, Math.round((max - min) / niceStep));
+  const ticks: number[] = [];
+  for (let i = 0; i <= tickCount; i++) {
+    ticks.push(min + i * niceStep);
+  }
+  return { min, max, ticks };
+}

@@ -236,3 +236,34 @@ export function getScopeYearValues(
     visitors: branch.visitors,
   };
 }
+
+/**
+ * 増減率（%）を符号付きの小数1桁文字列へ整形する。
+ */
+export function formatSignedDelta(pct: number | null): string {
+  if (pct === null) return "-";
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+/**
+ * 正の最大値からグラフY軸の切りの良い上限値を算出する。
+ */
+export function niceMax(rawMax: number, minFloor = 10): number {
+  if (rawMax <= 0) return minFloor;
+  const exp = Math.floor(Math.log10(rawMax));
+  const base = 10 ** exp;
+  const frac = rawMax / base;
+  let niceFrac = 10;
+  if (frac <= 1.0) niceFrac = 1.0;
+  else if (frac <= 1.2) niceFrac = 1.2;
+  else if (frac <= 1.5) niceFrac = 1.5;
+  else if (frac <= 2.0) niceFrac = 2.0;
+  else if (frac <= 2.5) niceFrac = 2.5;
+  else if (frac <= 3.0) niceFrac = 3.0;
+  else if (frac <= 4.0) niceFrac = 4.0;
+  else if (frac <= 5.0) niceFrac = 5.0;
+  else if (frac <= 6.0) niceFrac = 6.0;
+  else if (frac <= 8.0) niceFrac = 8.0;
+  return niceFrac * base;
+}

@@ -18,10 +18,17 @@ import {
   calcYoYPercent,
   formatAxisValue,
   formatJaCount,
+  formatSignedDelta,
   getBranchMetricValue,
   getCombinedTimelinePoints,
+  getScopeYearValues,
+  niceMax,
 } from "./library-usage-metrics";
-import { libraryUsageDatasetSchema } from "./library-usage-schema";
+import {
+  type AnnualRecord,
+  type BranchYearMetrics,
+  libraryUsageDatasetSchema,
+} from "./library-usage-schema";
 
 function crc32(buf: Buffer): number {
   let crc = 0xffffffff;
@@ -278,6 +285,103 @@ describe("library-usage-metrics", () => {
         "turnoverRate",
       ),
     ).toBe(0.9);
+  });
+
+  it("handles all branch metrics, scope extraction, signed deltas, and niceMax boundaries", () => {
+    const branch: BranchYearMetrics = {
+      branchId: "nanbu",
+      openDays: 280,
+      holdingsTotal: null,
+      holdingsBooks: 50000,
+      holdingsBooksChildren: 20000,
+      registeredTotal: 4000,
+      registeredChildren: 1000,
+      loansTotal: 100000,
+      loansChildren: 45000,
+      reservationsTotal: 8000,
+      referenceCount: 500,
+      visitors: 60000,
+    };
+
+    expect(getBranchMetricValue(branch, "loansTotal")).toBe(100000);
+    expect(getBranchMetricValue(branch, "holdingsDisplay")).toBe(50000);
+    expect(getBranchMetricValue(branch, "registeredTotal")).toBe(4000);
+    expect(getBranchMetricValue(branch, "childrenLoanShare")).toBe(45);
+    expect(
+      getBranchMetricValue(
+        { ...branch, holdingsTotal: 0, holdingsBooks: null },
+        "turnoverRate",
+      ),
+    ).toBeNull();
+
+    const sampleRecord: AnnualRecord = {
+      fiscalYear: 2025,
+      eraLabel: "令和7年度",
+      shortEraLabel: "R7",
+      population: 230000,
+      holdingsTotal: null,
+      holdingsBooks: 50000,
+      holdingsBooksChildren: 20000,
+      registeredTotal: 4000,
+      registeredChildren: 1000,
+      loansTotal: 100000,
+      loansChildren: 45000,
+      groupLoansTotal: 0,
+      reservationsTotal: null,
+      referenceCount: null,
+      registrationPolicyChange: false,
+      dataSourceNote: "test",
+      eventNotes: [],
+      branches: [
+        branch,
+        { ...branch, branchId: "chuo", visitors: null },
+        { ...branch, branchId: "agata", visitors: 10000 },
+        { ...branch, branchId: "kamata", visitors: null },
+        { ...branch, branchId: "kotobukidai", visitors: null },
+        { ...branch, branchId: "hongo", visitors: null },
+        { ...branch, branchId: "nakayama", visitors: null },
+        { ...branch, branchId: "shimauchi", visitors: null },
+        { ...branch, branchId: "kuko", visitors: null },
+        { ...branch, branchId: "azusagawa", visitors: null },
+        { ...branch, branchId: "hata", visitors: null },
+      ],
+      servicePoints: [],
+    };
+
+    expect(getScopeYearValues(sampleRecord, "all").visitors).toBe(70000);
+    expect(getScopeYearValues(sampleRecord, "nanbu").loansTotal).toBe(100000);
+    expect(
+      getScopeYearValues(
+        {
+          ...sampleRecord,
+          branches: sampleRecord.branches.map((b) => ({
+            ...b,
+            visitors: null,
+          })),
+        },
+        "all",
+      ).visitors,
+    ).toBeNull();
+    expect(() =>
+      getScopeYearValues({ ...sampleRecord, branches: [] }, "chuo"),
+    ).toThrow(/Branch chuo missing/);
+
+    expect(formatAxisValue(0, "冊")).toBe("0");
+    expect(formatAxisValue(25, "%")).toBe("25%");
+    expect(formatAxisValue(10000, "冊")).toBe("1万");
+    expect(formatAxisValue(1234, "unknown")).toBe("1,234");
+
+    expect(formatSignedDelta(null)).toBe("-");
+    expect(formatSignedDelta(3.45)).toBe("+3.5%");
+    expect(formatSignedDelta(-2.1)).toBe("-2.1%");
+    expect(formatSignedDelta(0)).toBe("0.0%");
+
+    expect(niceMax(0, 50)).toBe(50);
+    expect(niceMax(100)).toBe(100);
+    expect(niceMax(115)).toBe(120);
+    expect(niceMax(230)).toBe(250);
+    expect(niceMax(750)).toBe(800);
+    expect(niceMax(950)).toBe(1000);
   });
 });
 

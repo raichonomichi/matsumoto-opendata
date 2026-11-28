@@ -3,13 +3,16 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import {
+  buildWifiSearchText,
+  getSsrInitialStatusLabel,
+  type WifiTabKey,
+} from "@/lib/free-wifi-client";
+import {
   type AccessPolicy,
   freeWifiDatasetSchema,
   type IndoorOutdoor,
   type PowerAvailability,
   type WifiAreaGroup,
-  type WifiPurpose,
-  type WifiSpot,
 } from "@/lib/free-wifi-schema";
 
 const rawJson = readFileSync(path.resolve("src/data/free-wifi.json"), "utf-8");
@@ -21,7 +24,7 @@ const datasetIds = [
   "cao-national-holidays",
 ];
 
-type TabKey = WifiPurpose | "all";
+type TabKey = WifiTabKey;
 
 const studyWorkCount = dataset.spots.filter((s) =>
   s.purposes.includes("study_work"),
@@ -157,46 +160,6 @@ const useCases = [
   },
 ] as const;
 
-function buildSearchText(spot: WifiSpot): string {
-  return [
-    spot.name,
-    spot.facilityName,
-    spot.category,
-    spot.address,
-    spot.district,
-    areaLabels[spot.areaGroup],
-    spot.ssid ?? "",
-    spot.studyWorkNote ?? "",
-    spot.powerNote ?? "",
-    spot.complexNote ?? "",
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-}
-
-function getSsrInitialStatusLabel(spot: WifiSpot): {
-  label: string;
-  badgeClass: string;
-} {
-  if (spot.schedule.kind === "outdoor_24h") {
-    return {
-      label: "屋外・終日目安",
-      badgeClass: "bg-sky-50 text-sky-800 ring-sky-200",
-    };
-  }
-  if (spot.schedule.kind === "check_official") {
-    return {
-      label: "開館時間要確認",
-      badgeClass: "bg-amber-50 text-amber-800 ring-amber-200",
-    };
-  }
-  return {
-    label: "開館目安あり",
-    badgeClass: "bg-slate-100 text-slate-700 ring-slate-200",
-  };
-}
-
 const embeddedPayload = {
   holidays: dataset.holidays,
   tabGuides: Object.fromEntries(tabs.map((t) => [t.id, t.guide])),
@@ -217,7 +180,7 @@ const embeddedPayload = {
     lat: s.lat,
     lng: s.lng,
     schedule: s.schedule,
-    searchText: buildSearchText(s),
+    searchText: buildWifiSearchText(s, areaLabels[s.areaGroup]),
   })),
 };
 const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
@@ -903,38 +866,20 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
 
   <script>
     import {
+      compareWifiSpots,
+      formatDistanceBadge,
+      matchesWifiSpotFilter,
+      type WifiFilterableSpot,
+    } from "@/lib/free-wifi-client";
+    import {
       evaluateOpenStatus,
       getJstDateParts,
       haversineDistanceKm,
       type OpenEvaluation,
     } from "@/lib/free-wifi-schedule";
-    import type {
-      AccessPolicy,
-      FacilitySchedule,
-      PowerAvailability,
-      WifiAreaGroup,
-      WifiPurpose,
-    } from "@/lib/free-wifi-schema";
+    import type { WifiAreaGroup, WifiPurpose } from "@/lib/free-wifi-schema";
 
-    interface ClientSpot {
-      id: string;
-      purposes: WifiPurpose[];
-      areaGroup: WifiAreaGroup;
-      district: string;
-      ssid: string | null;
-      accessPolicy: AccessPolicy;
-      powerAvailability: PowerAvailability;
-      openLate: boolean;
-      openMonday: boolean;
-      openWeekend: boolean;
-      apCount: number;
-      recommendedRank: number;
-      latestCloseMinutes: number | null;
-      lat: number;
-      lng: number;
-      schedule: FacilitySchedule;
-      searchText: string;
-    }
+    type ClientSpot = WifiFilterableSpot;
 
     interface EmbeddedPayload {
       holidays: Record<string, string>;
@@ -1137,10 +1082,7 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
               "[data-distance-badge]",
             );
             if (distBadge && km !== undefined) {
-              distBadge.textContent =
-                km < 1
-                  ? `現在地から 約${Math.round(km * 1000)}m`
-                  : `現在地から 約${km.toFixed(1)}km`;
+              distBadge.textContent = formatDistanceBadge(km);
               distBadge.classList.remove("hidden");
             }
           }
@@ -1177,68 +1119,23 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
       );
     }
 
-    function matchesQuickFilters(spot: ClientSpot): boolean {
-      if (activeQuickFilters.has("open-now")) {
-        const ev = openEvaluations.get(spot.id);
-        if (!ev || (ev.status !== "open" && ev.status !== "outdoor")) {
-          return false;
-        }
-      }
-      if (
-        activeQuickFilters.has("drop-in") &&
-        spot.accessPolicy !== "drop_in" &&
-        spot.accessPolicy !== "outdoor_open"
-      ) {
-        return false;
-      }
-      if (activeQuickFilters.has("open-late") && !spot.openLate) {
-        return false;
-      }
-      if (activeQuickFilters.has("open-monday") && !spot.openMonday) {
-        return false;
-      }
-      if (activeQuickFilters.has("open-weekend") && !spot.openWeekend) {
-        return false;
-      }
-      if (
-        activeQuickFilters.has("has-power") &&
-        spot.powerAvailability !== "available" &&
-        spot.powerAvailability !== "limited_seats"
-      ) {
-        return false;
-      }
-      return true;
-    }
-
     function applyFilterAndSort(): void {
       const district = districtSelect?.value ?? "all";
       const ssid = ssidSelect?.value ?? "all";
-      const keyword = (keywordInput?.value ?? "").trim().toLowerCase();
+      const keyword = keywordInput?.value ?? "";
       const sortBy = sortSelect?.value ?? "recommended";
 
       const sortedCards = [...cards].sort((a, b) => {
         const spotA = spotById.get(a.dataset.spotId ?? "");
         const spotB = spotById.get(b.dataset.spotId ?? "");
         if (!spotA || !spotB) return 0;
-
-        if (sortBy === "distance" && userLocation) {
-          const dA = distanceMap.get(spotA.id) ?? Number.MAX_SAFE_INTEGER;
-          const dB = distanceMap.get(spotB.id) ?? Number.MAX_SAFE_INTEGER;
-          if (dA !== dB) return dA - dB;
-        } else if (sortBy === "ap-desc") {
-          if (spotB.apCount !== spotA.apCount) {
-            return spotB.apCount - spotA.apCount;
-          }
-        } else if (sortBy === "close-desc") {
-          const cA = spotA.latestCloseMinutes ?? -1;
-          const cB = spotB.latestCloseMinutes ?? -1;
-          if (cB !== cA) return cB - cA;
-        }
-
-        if (spotA.recommendedRank !== spotB.recommendedRank) {
-          return spotA.recommendedRank - spotB.recommendedRank;
-        }
-        return spotA.id.localeCompare(spotB.id);
+        return compareWifiSpots(
+          spotA,
+          spotB,
+          sortBy,
+          distanceMap,
+          userLocation !== null,
+        );
       });
 
       let visibleCount = 0;
@@ -1246,19 +1143,18 @@ const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
         const spot = spotById.get(card.dataset.spotId ?? "");
         if (!spot) continue;
 
-        const tabOk =
-          activeTab === "all" || spot.purposes.includes(activeTab);
-        const areaOk =
-          selectedArea === "all" || spot.areaGroup === selectedArea;
-        const districtOk = district === "all" || spot.district === district;
-        const ssidOk =
-          ssid === "all" ||
-          (ssid === "none" ? spot.ssid === null : spot.ssid === ssid);
-        const keywordOk = keyword === "" || spot.searchText.includes(keyword);
-        const quickOk = matchesQuickFilters(spot);
-
-        const visible =
-          tabOk && areaOk && districtOk && ssidOk && keywordOk && quickOk;
+        const visible = matchesWifiSpotFilter(
+          spot,
+          {
+            activeTab,
+            selectedArea,
+            district,
+            ssid,
+            keyword,
+            activeQuickFilters,
+          },
+          openEvaluations,
+        );
         card.classList.toggle("hidden", !visible);
         if (visible) visibleCount++;
         listEl?.appendChild(card);

@@ -302,10 +302,110 @@ describe("evaluateBathAvailability & helpers", () => {
     ).toBe("check_official");
   });
 
-  it("calculates realistic distance in Matsumoto", () => {
+  it("calculates realistic distance in Matsumoto and respects zero/symmetry", () => {
     const km = haversineDistanceKm(36.2309, 137.9644, 36.262989, 137.9888);
     expect(km).toBeGreaterThan(3.5);
     expect(km).toBeLessThan(4.8);
+    expect(haversineDistanceKm(36.2309, 137.9644, 36.2309, 137.9644)).toBe(0);
+    expect(
+      haversineDistanceKm(36.262989, 137.9888, 36.2309, 137.9644),
+    ).toBeCloseTo(km, 10);
+  });
+
+  it("checks exact open/lastEntry/close minute boundaries, yearEndClosed, daySessions, and seasonal openOnHolidaysOverride", () => {
+    const schedule: BathSchedule = {
+      kind: "structured",
+      openDays: [1, 2, 3, 4, 5],
+      defaultSessions: [
+        {
+          openMinutes: 10 * 60,
+          lastEntryMinutes: 20 * 60,
+          closeMinutes: 21 * 60,
+        },
+      ],
+      daySessions: {
+        "6": [
+          {
+            openMinutes: 9 * 60,
+            lastEntryMinutes: 21 * 60,
+            closeMinutes: 22 * 60,
+          },
+        ],
+        holiday: [
+          {
+            openMinutes: 8 * 60,
+            lastEntryMinutes: 18 * 60,
+            closeMinutes: 19 * 60,
+          },
+        ],
+      },
+      seasonalOverrides: [
+        {
+          months: [5],
+          openOnHolidaysOverride: true,
+          note: "GW特別営業",
+        },
+      ],
+      seasonalClosure: null,
+      holidayRule: "none",
+      nthWeekdaysClosed: [],
+      yearEndClosed: { startMmdd: "12-30", endMmdd: "01-02" },
+      summaryText: "平日 10:00〜21:00",
+      lastEntryText: "20:00",
+      holidayNote: null,
+      irregularNote: null,
+    };
+
+    // 2026-11-10 Tue 09:59 JST -> opening_later_today
+    expect(
+      evaluateBathAvailability(schedule, new Date("2026-11-10T00:59:00Z"), {})
+        .status,
+    ).toBe("opening_later_today");
+    // 10:00 JST -> open_now
+    expect(
+      evaluateBathAvailability(schedule, new Date("2026-11-10T01:00:00Z"), {})
+        .status,
+    ).toBe("open_now");
+    // 19:59 JST -> open_now
+    expect(
+      evaluateBathAvailability(schedule, new Date("2026-11-10T10:59:00Z"), {})
+        .status,
+    ).toBe("open_now");
+    // 20:00 JST -> closed_today (at last entry, before 21:00 close)
+    const atLastEntry = evaluateBathAvailability(
+      schedule,
+      new Date("2026-11-10T11:00:00Z"),
+      {},
+    );
+    expect(atLastEntry.status).toBe("closed_today");
+    expect(atLastEntry.detailText).toContain("閉館 21:00");
+    // 21:00 JST -> closed_today (after close)
+    const afterClose = evaluateBathAvailability(
+      schedule,
+      new Date("2026-11-10T12:00:00Z"),
+      {},
+    );
+    expect(afterClose.status).toBe("closed_today");
+    expect(afterClose.detailText).toBe("本日の受付終了（最終受付 20:00）");
+
+    // 2026-12-30 -> year-end closed; 2027-01-03 -> open (if weekday, wait 2027-01-04 Mon is open)
+    expect(
+      evaluateBathAvailability(schedule, new Date("2026-12-30T03:00:00Z"), {})
+        .label,
+    ).toBe("年末年始休業（目安）");
+    expect(
+      evaluateBathAvailability(schedule, new Date("2027-01-02T03:00:00Z"), {})
+        .label,
+    ).toBe("年末年始休業（目安）");
+
+    // 2026-05-03 Sun (in May + holiday + openOnHolidaysOverride=true) -> uses daySessions.holiday (8:00〜19:00)
+    const mayHoliday = evaluateBathAvailability(
+      schedule,
+      new Date("2026-05-03T00:00:00Z"), // 09:00 JST
+      holidays,
+    );
+    expect(mayHoliday.status).toBe("open_now");
+    expect(mayHoliday.todayHoursText).toBe("8:00〜19:00（最終受付 18:00）");
   });
 });
 
