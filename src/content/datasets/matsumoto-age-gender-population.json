@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-age-gender-population",
+  "name": "松本市 年齢別男女別人口（平成29年〜令和8年）",
+  "provider": "松本市（DX推進本部）",
+  "description": "住民基本台帳に基づく松本市の各月1日現在の年齢別（0歳〜109歳・1歳刻み）・男女別人口データ。平成29年（2017年）1月から令和8年（2026年）11月までの月次119時点を収録。",
+  "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/5/4172.html",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/deed.ja",
+  "attribution": "松本市 DX推進本部（旧・情報政策課）「年齢別男女別人口（平成29年〜令和8年）」（LinkData.org 公開 / クリエイティブ・コモンズ・ライセンス 表示 3.0 非移植）",
+  "format": ["TSV", "Excel", "RDF/Turtle"],
+  "updateFrequency": "毎月更新（年別ワークで公開）",
+  "updatedAt": "2026-11-28",
+  "notes": "LinkData.org 配布ファイルヘッダの明記に従い CC BY 3.0 として登録しています。平成29年（rdf1s7430i）〜令和8年（rdf1s10410i）の10年分・119か月分を統合・整合性検証しています。"
+}
