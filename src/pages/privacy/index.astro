@@ -59,7 +59,16 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
         位置情報の取り扱い
       </h2>
       <p class="text-sm leading-relaxed text-slate-700">
-        「松本フリーWi-Fi 目的別ファインダー」等のページにおいて、利用者が「現在地から近い順」などの操作を行った場合に限り、ブラウザの Geolocation API を通じて現在地を取得します。取得した位置情報は利用者のブラウザ内での距離計算のみに使用し、当サイトのサーバーや外部サービスへの送信・保存は一切行いません。
+        「松本フリーWi-Fi 目的別ファインダー」や「松本 最終バス・カウントダウン」等のページにおいて、利用者が「現在地から近い順」「現在地から最寄りバス停を探す」などの操作を行った場合に限り、ブラウザの Geolocation API を通じて現在地を取得します。取得した位置情報は利用者のブラウザ内での距離計算のみに使用し、当サイトのサーバーや外部サービスへの送信・保存は一切行いません。
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-xl font-bold tracking-tight text-slate-900">
+        ブラウザ内への設定保存（localStorage）
+      </h2>
+      <p class="text-sm leading-relaxed text-slate-700">
+        一部のサービスでは、よく使う路線や停留所のピン留め状態など、利便性向上のための設定情報をブラウザの localStorage に保存します。保存された情報は利用者の端末内のみで参照され、当サイトのサーバーや外部サービスへ送信されることはありません。ブラウザの設定からいつでも削除できます。
       </p>
     </section>
 

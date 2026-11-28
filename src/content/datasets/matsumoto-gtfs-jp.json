@@ -9,7 +9,7 @@
   "attribution": "松本市「バス情報データ（GTFS-JPデータ）」（GTFSデータリポジトリ公開 / クリエイティブ・コモンズ・ライセンス 表示 4.0 国際）",
   "format": ["GTFS-JP (ZIP/CSV)"],
   "updateFrequency": "ダイヤ改正時",
-  "updatedAt": "2026-11-25",
+  "updatedAt": "2026-11-28",
   "validUntil": "2028-03-31",
-  "notes": "guruttomatsumotobus1（美ヶ原温泉線等）および guruttomatsumotobus2（奈川・安曇線・入山辺線等）を利用。上高地・乗鞍山頂シャトル等のアルピコ交通路線は本フィード対象外のため公式時刻表ページへ案内しています。"
+  "notes": "guruttomatsumotobus1（松本駅・バスターミナル発着バス17路線）および guruttomatsumotobus2（地域連携バス17路線）の現行全34路線を利用。上高地・乗鞍山頂シャトルや高速バス等のアルピコ交通路線・JR線は本フィード対象外のため公式時刻表ページへ案内しています。"
 }

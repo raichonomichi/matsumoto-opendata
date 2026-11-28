@@ -1,0 +1,11 @@
+{
+  "id": "last-bus",
+  "title": "松本 最終バス・カウントダウン",
+  "summary": "ぐるっとまつもとバス全34路線・全674停留所の「終バスまでの残り時間」をリアルタイムにカウントダウン。松本駅エリア発着の一覧、現在地からの最寄りバス停検索、祝日・お盆ダイヤ対応の日時シミュレーションに対応しています。",
+  "status": "published",
+  "path": "/last-bus/",
+  "datasets": ["matsumoto-gtfs-jp"],
+  "tags": ["路線バス", "最終バス", "GTFS-JP", "カウントダウン", "交通"],
+  "publishedAt": "2026-11-28",
+  "issueUrl": "https://github.com/raichonomichi/matsumoto-opendata/issues/2"
+}

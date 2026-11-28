@@ -22,6 +22,7 @@
     "pipeline:sentou": "tsx pipelines/build-sentou.ts",
     "pipeline:matsumoto-weather-history": "node --import tsx pipelines/build-matsumoto-weather-history.ts",
     "pipeline:population": "tsx pipelines/build-population.ts",
+    "pipeline:last-bus": "tsx pipelines/build-last-bus.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
