@@ -1,0 +1,2387 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  computeSnapshotMetrics,
+  formatYmJa,
+  resolveComparisonSnapshot,
+} from "@/lib/population-analytics";
+import { populationDatasetSchema } from "@/lib/population-schema";
+
+const rawJson = readFileSync(path.resolve("src/data/population.json"), "utf-8");
+const dataset = populationDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = ["matsumoto-age-gender-population"];
+
+const latestSnapshot = dataset.snapshots[dataset.snapshots.length - 1];
+if (!latestSnapshot) {
+  throw new Error("population.json has no snapshots");
+}
+const baseline2017 = resolveComparisonSnapshot(
+  dataset.snapshots,
+  latestSnapshot,
+  "start_2017",
+);
+const latestMetrics = computeSnapshotMetrics(latestSnapshot);
+const baselineMetrics = baseline2017
+  ? computeSnapshotMetrics(baseline2017)
+  : null;
+
+const totalDiffVs2017 = baseline2017
+  ? latestSnapshot.total - baseline2017.total
+  : null;
+const elderlyPctDiffVs2017 = baselineMetrics
+  ? Math.round((latestMetrics.elderlyPct - baselineMetrics.elderlyPct) * 10) /
+    10
+  : null;
+
+const years = dataset.range.years;
+const months = Array.from({ length: 12 }, (_, idx) => idx + 1);
+
+const useCases = [
+  {
+    title: "年代ごとの人口バランスと男女比を眺めたい時",
+    description:
+      "10歳階級・5歳階級・1歳刻みの3段階で人口ピラミッドを切り替えられ、どの世代にどれだけの人が暮らしているかを直感的に見渡せます。",
+  },
+  {
+    title: "過去10年間の人口構造の変化を比べたい時",
+    description:
+      "2017年からの月次119時点のデータをスライダーやタイムラプス再生で動かしながら、基準年との輪郭重ね比較で増減の大きい世代を確認できます。",
+  },
+  {
+    title: "特定の年代や3区分だけの長期推移を追いたい時",
+    description:
+      "「20代」「30代」などの年代や「年少・生産年齢・老年人口」のボタンを切り替えて、男女別の推移グラフと全人口に占める割合の変化を比較できます。",
+  },
+] as const;
+
+const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
+---
+
+<BaseLayout
+  title="松本市 人口ピラミッド・年代別グラフ"
+  description="松本市の住民基本台帳に基づく年齢別（0〜109歳）・男女別人口（2017年〜2026年・月次119時点）を、人口ピラミッドと年代別推移グラフで切り替えて眺められます。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-9 text-white sm:px-9 sm:py-11">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-alps-200 ring-1 ring-white/15">
+          松本市 住民基本台帳人口 10年アーカイブ
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          データ更新日: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        松本市 人口ピラミッド・年代別グラフ
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        松本市が公開している「年齢別男女別人口」オープンデータ（平成29年〜令和8年・月次{" "}
+        {dataset.range.snapshotCount}{" "}
+        時点）を統合し、年代粒度の切り替え・過去比較・年代別の推移グラフを1ページでじっくり眺められる可視化ツールです。
+      </p>
+
+      <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">
+            最新総人口（{formatYmJa(latestSnapshot.ym, false)}1日現在）
+          </p>
+          <p class="mt-0.5 text-lg font-bold">
+            {latestSnapshot.total.toLocaleString("ja-JP")} 人
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            男 {latestSnapshot.male.toLocaleString("ja-JP")} 人 / 女{" "}
+            {latestSnapshot.female.toLocaleString("ja-JP")} 人
+            {totalDiffVs2017 !== null &&
+              `（2017年同月比 ${totalDiffVs2017 >= 0 ? "+" : ""}${totalDiffVs2017.toLocaleString("ja-JP")}人）`}
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">
+            高齢化率（65歳以上・{formatYmJa(latestSnapshot.ym, false)}）
+          </p>
+          <p class="mt-0.5 text-lg font-bold">
+            {latestMetrics.elderlyPct.toFixed(1)}%
+            <span class="ml-1 text-xs font-normal text-alps-200">
+              （{latestMetrics.elderlyCount.toLocaleString("ja-JP")} 人）
+            </span>
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            年少 {latestMetrics.youthPct.toFixed(1)}% / 生産年齢{" "}
+            {latestMetrics.workingPct.toFixed(1)}%
+            {elderlyPctDiffVs2017 !== null &&
+              `（2017年比 ${elderlyPctDiffVs2017 >= 0 ? "+" : ""}${elderlyPctDiffVs2017.toFixed(1)}pt）`}
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">収録アーカイブ期間</p>
+          <p class="mt-0.5 text-lg font-bold">
+            {formatYmJa(dataset.range.startYm, false)}〜
+            {formatYmJa(dataset.range.endYm, false)}
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            全 {dataset.range.snapshotCount} か月分 × 0歳〜{dataset.maxAge}歳（1歳刻み）
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section aria-labelledby="use-cases-heading" class="space-y-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="use-cases-heading"
+          class="text-base font-bold text-slate-900 sm:text-lg"
+        >
+          こんな時に使えます
+        </h2>
+        <p class="text-xs text-slate-500">
+          松本市の世代構成・少子高齢化の推移・男女別バランスの確認向け
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {useCases.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-bold text-alps-950">{item.title}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Notice & Official Links -->
+    <aside
+      aria-label="統計データの前提と公式案内"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        データの基準・集計仕様について
+      </p>
+      <p class="mt-1 text-amber-900/90">{dataset.notice}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={dataset.officialLinks.portal}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-800"
+        >
+          松本市オープンデータ公式一覧 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.latestWork}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          LinkData.org 最新年（令和8年）ワーク ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Section 1: Population Pyramid -->
+    <section
+      aria-labelledby="pyramid-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="pyramid-heading" class="text-lg font-bold text-slate-900 sm:text-xl">
+            1. 人口ピラミッド（年代・時点・比較の切り替え）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            左が男性、右が女性です。年代の粒度や時点を切り替えたり、年代バーをクリックして下の推移グラフと連動させたりできます。
+          </p>
+        </div>
+        <div class="rounded-xl bg-alps-50 px-3.5 py-2 text-right ring-1 ring-alps-200">
+          <p class="text-[11px] font-medium text-alps-700">表示中の時点</p>
+          <p
+            id="pyramid-current-label"
+            class="text-sm font-bold text-alps-950"
+          >
+            {formatYmJa(latestSnapshot.ym)} 1日現在
+          </p>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="mt-4 space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div>
+            <p class="text-xs font-semibold text-slate-700">年代の粒度</p>
+            <div
+              class="mt-2 flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="年代の粒度切替"
+            >
+              <button
+                type="button"
+                data-granularity-btn="decade"
+                aria-pressed="true"
+                class="rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+              >
+                10歳階級（年代別）
+              </button>
+              <button
+                type="button"
+                data-granularity-btn="five_year"
+                aria-pressed="false"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                5歳階級
+              </button>
+              <button
+                type="button"
+                data-granularity-btn="single"
+                aria-pressed="false"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                1歳刻み
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-700">過去比較の重ね線</p>
+            <div
+              class="mt-2 flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="過去比較オーバーレイ切替"
+            >
+              <button
+                type="button"
+                data-compare-btn="start_2017"
+                aria-pressed="true"
+                class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+              >
+                2017年同月
+              </button>
+              <button
+                type="button"
+                data-compare-btn="five_years_ago"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                5年前同月
+              </button>
+              <button
+                type="button"
+                data-compare-btn="prev_year"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                前年同月
+              </button>
+              <button
+                type="button"
+                data-compare-btn="none"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                比較なし
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-700">横軸スケール</p>
+            <div
+              class="mt-2 flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="横軸スケール切替"
+            >
+              <button
+                type="button"
+                data-axis-btn="fixed"
+                aria-pressed="true"
+                class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+              >
+                軸を全期間で固定
+              </button>
+              <button
+                type="button"
+                data-axis-btn="auto"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                表示時点に最適化
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Year & Month Selection + Timelapse -->
+        <div class="border-t border-slate-200/80 pt-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="年を切り替え">
+              <span class="mr-1 text-xs font-semibold text-slate-700">年:</span>
+              {years.map((y) => {
+                const isInitial = y === latestSnapshot.year;
+                return (
+                  <button
+                    type="button"
+                    data-year-btn={String(y)}
+                    aria-pressed={isInitial ? "true" : "false"}
+                    class:list={[
+                      "rounded-lg px-2.5 py-1 text-xs transition",
+                      isInitial
+                        ? "bg-alps-900 font-semibold text-white"
+                        : "border border-slate-300 bg-white font-medium text-slate-700 hover:border-alps-400 hover:text-alps-900",
+                    ]}
+                  >
+                    {y}年
+                  </button>
+                );
+              })}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <label
+                for="month-select"
+                class="text-xs font-semibold text-slate-700"
+              >
+                月:
+              </label>
+              <select
+                id="month-select"
+                class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 focus:border-alps-500 focus:outline-none"
+              >
+                {months.map((m) => (
+                  <option value={String(m)} selected={m === latestSnapshot.month}>
+                    {m}月（1日現在）
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <p
+            id="year-month-clamp-note"
+            class="mt-2 hidden text-[11px] font-medium text-amber-800"
+          />
+
+          <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="flex flex-1 items-center gap-3">
+              <span class="shrink-0 font-mono text-[11px] text-slate-500">
+                {dataset.range.startYm}
+              </span>
+              <input
+                id="timeline-slider"
+                type="range"
+                min="0"
+                max={String(dataset.snapshots.length - 1)}
+                value={String(dataset.snapshots.length - 1)}
+                aria-label="表示年月スライダー"
+                class="h-2 w-full cursor-pointer accent-alps-700"
+              />
+              <span class="shrink-0 font-mono text-[11px] text-slate-500">
+                {dataset.range.endYm}
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                id="play-toggle-btn"
+                type="button"
+                aria-pressed="false"
+                class="inline-flex items-center rounded-xl bg-alps-800 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-alps-700"
+              >
+                ▶ 10年変化を再生
+              </button>
+              <div
+                class="inline-flex rounded-xl border border-slate-300 bg-white p-0.5 text-[11px]"
+                role="group"
+                aria-label="再生ステップ切替"
+              >
+                <button
+                  type="button"
+                  data-play-mode-btn="annual"
+                  aria-pressed="true"
+                  class="rounded-lg bg-alps-900 px-2.5 py-1 font-semibold text-white transition"
+                >
+                  年次
+                </button>
+                <button
+                  type="button"
+                  data-play-mode-btn="monthly"
+                  aria-pressed="false"
+                  class="rounded-lg px-2.5 py-1 font-medium text-slate-600 transition hover:text-slate-900"
+                >
+                  月次
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Cards for Selected Snapshot -->
+      <div
+        id="summary-cards"
+        class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+          <p class="text-[11px] font-medium text-slate-500">総人口</p>
+          <p class="mt-0.5 text-lg font-bold text-slate-900">
+            {latestSnapshot.total.toLocaleString("ja-JP")} 人
+          </p>
+          <p class="mt-0.5 text-[11px] text-slate-600">
+            男 {latestSnapshot.male.toLocaleString("ja-JP")} / 女{" "}
+            {latestSnapshot.female.toLocaleString("ja-JP")}
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+          <p class="text-[11px] font-medium text-slate-500">
+            生産年齢人口（15〜64歳）
+          </p>
+          <p class="mt-0.5 text-lg font-bold text-slate-900">
+            {latestMetrics.workingPct.toFixed(1)}%
+          </p>
+          <p class="mt-0.5 text-[11px] text-slate-600">
+            {latestMetrics.workingCount.toLocaleString("ja-JP")} 人
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+          <p class="text-[11px] font-medium text-slate-500">
+            高齢化率（65歳以上）
+          </p>
+          <p class="mt-0.5 text-lg font-bold text-slate-900">
+            {latestMetrics.elderlyPct.toFixed(1)}%
+          </p>
+          <p class="mt-0.5 text-[11px] text-slate-600">
+            {latestMetrics.elderlyCount.toLocaleString("ja-JP")} 人（75歳以上{" "}
+            {latestMetrics.lateElderlyPct.toFixed(1)}%）
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+          <p class="text-[11px] font-medium text-slate-500">
+            平均年齢 / 中央値
+          </p>
+          <p class="mt-0.5 text-lg font-bold text-slate-900">
+            {latestMetrics.averageAge.toFixed(1)}歳 / {latestMetrics.medianAge}歳
+          </p>
+          <p class="mt-0.5 text-[11px] text-slate-600">
+            最多年齢: {latestMetrics.peakAge.age}歳（
+            {latestMetrics.peakAge.total.toLocaleString("ja-JP")}人）
+          </p>
+        </div>
+      </div>
+
+      <!-- Pyramid Legend & Inspector -->
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs">
+        <div class="flex flex-wrap items-center gap-4">
+          <span class="inline-flex items-center gap-1.5 font-medium text-slate-700">
+            <span class="inline-block h-3 w-3 rounded-sm bg-[#244666]" />
+            男性
+          </span>
+          <span class="inline-flex items-center gap-1.5 font-medium text-slate-700">
+            <span class="inline-block h-3 w-3 rounded-sm bg-[#cf4f6b]" />
+            女性
+          </span>
+          <span
+            id="pyramid-compare-legend"
+            class="inline-flex items-center gap-1.5 font-medium text-amber-800"
+          >
+            <span class="inline-block h-3 w-3 rounded-sm border-2 border-dashed border-[#d97706]" />
+            <span id="pyramid-compare-note">比較枠: 2017年11月</span>
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-500">
+          グラフ上の年代バーにカーソルを合わせるかクリックすると詳細確認・推移グラフ連動ができます
+        </p>
+      </div>
+
+      <div
+        id="band-inspector"
+        class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-alps-200/80 bg-alps-50/70 px-4 py-2.5 text-xs text-slate-800"
+      >
+        <span>
+          年代を選択またはホバーすると、男女別の実数と構成比・比較差を表示します。
+        </span>
+      </div>
+
+      <!-- Pyramid SVG -->
+      <div class="mt-3 overflow-x-auto">
+        <svg
+          id="pyramid-svg"
+          viewBox="0 0 820 430"
+          role="img"
+          aria-labelledby="pyramid-svg-title"
+          class="mx-auto block h-auto w-full min-w-[340px] max-w-[860px] select-none"
+        >
+          <title id="pyramid-svg-title">松本市 年齢別男女別人口ピラミッド</title>
+        </svg>
+      </div>
+
+      <!-- Collapsible Numeric Table -->
+      <details class="mt-4 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5">
+        <summary class="cursor-pointer text-xs font-semibold text-alps-800 hover:text-alps-950">
+          選択中時点・粒度の数値一覧テーブルを開く
+        </summary>
+        <div class="mt-3 overflow-x-auto">
+          <table class="w-full min-w-[540px] border-collapse text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 text-slate-500">
+                <th class="py-2 pr-3 font-semibold">年齢階級</th>
+                <th class="px-3 py-2 text-right font-semibold">総数</th>
+                <th class="px-3 py-2 text-right font-semibold">男性</th>
+                <th class="px-3 py-2 text-right font-semibold">女性</th>
+                <th class="px-3 py-2 text-right font-semibold">構成比</th>
+                <th
+                  id="pyramid-table-diff-header"
+                  class="pl-3 py-2 text-right font-semibold"
+                >
+                  比較差
+                </th>
+              </tr>
+            </thead>
+            <tbody id="pyramid-table-body" class="divide-y divide-slate-100" />
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <!-- Section 2: Decade / Age-Group Trend Chart -->
+    <section
+      id="trend-section"
+      aria-labelledby="trend-heading"
+      class="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="trend-heading" class="text-lg font-bold text-slate-900 sm:text-xl">
+            2. 年代別の人口推移グラフ（2017年〜2026年）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            気になる年代を切り替えて、10年間の人数推移・男女別の動き・全人口に占める割合の変化を眺められます。
+          </p>
+        </div>
+        <div class="rounded-xl bg-slate-100 px-3.5 py-2 text-right">
+          <p class="text-[11px] font-medium text-slate-500">表示中の区分</p>
+          <p id="trend-active-label" class="text-sm font-bold text-slate-900">
+            全年齢（0〜109歳）
+          </p>
+        </div>
+      </div>
+
+      <!-- Trend Controls -->
+      <div class="mt-4 space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs font-semibold text-slate-700">分類:</span>
+            <div
+              class="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="推移グラフ分類モード"
+            >
+              <button
+                type="button"
+                data-trend-mode-btn="decade"
+                aria-pressed="true"
+                class="rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+              >
+                10歳年代別（0代〜90歳以上）
+              </button>
+              <button
+                type="button"
+                data-trend-mode-btn="three_tier"
+                aria-pressed="false"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                年齢3区分（年少・生産・老年）
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <div
+              class="flex flex-wrap gap-1"
+              role="group"
+              aria-label="推移期間粒度"
+            >
+              <button
+                type="button"
+                data-cadence-btn="annual_same_month"
+                aria-pressed="true"
+                class="rounded-full bg-alps-900 px-3 py-1 text-xs font-semibold text-white transition"
+              >
+                年次（同月）
+              </button>
+              <button
+                type="button"
+                data-cadence-btn="monthly"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                月次（全119か月）
+              </button>
+            </div>
+
+            <div
+              class="flex flex-wrap gap-1"
+              role="group"
+              aria-label="推移グラフ表示系列"
+            >
+              <button
+                type="button"
+                data-series-btn="gender"
+                aria-pressed="true"
+                class="rounded-full bg-alps-900 px-3 py-1 text-xs font-semibold text-white transition"
+              >
+                男女別
+              </button>
+              <button
+                type="button"
+                data-series-btn="total"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                総数
+              </button>
+              <button
+                type="button"
+                data-series-btn="share"
+                aria-pressed="false"
+                class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+              >
+                全人口比（%）
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200/80 pt-3">
+          <p class="mb-2 text-xs font-semibold text-slate-700">
+            年代を選んで切り替え:
+          </p>
+          <div
+            id="trend-group-buttons"
+            class="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="表示する年代の選択"
+          />
+        </div>
+      </div>
+
+      <!-- Trend Summary Cards -->
+      <div
+        id="trend-summary-cards"
+        class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3"
+      />
+
+      <!-- Trend Chart Legend & Inspector -->
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div id="trend-legend" class="flex flex-wrap items-center gap-4" />
+        <p class="text-[11px] text-slate-500">
+          グラフ上の点をクリックすると上の人口ピラミッドがその時点へ移動します
+        </p>
+      </div>
+
+      <div
+        id="trend-inspector"
+        class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2.5 text-xs text-slate-800"
+      />
+
+      <div class="mt-3 overflow-x-auto">
+        <svg
+          id="trend-svg"
+          viewBox="0 0 820 330"
+          role="img"
+          aria-labelledby="trend-svg-title"
+          class="mx-auto block h-auto w-full min-w-[340px] max-w-[860px] select-none"
+        >
+          <title id="trend-svg-title">松本市 年代別人口推移グラフ</title>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Section 3: 10-Year Three-Tier Composition Bars -->
+    <section
+      aria-labelledby="composition-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="composition-heading" class="text-lg font-bold text-slate-900 sm:text-xl">
+            3. 年齢3区分（年少・生産年齢・老年）構成比の10年推移
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            選択中の月（<span id="composition-month-label" class="font-semibold text-slate-800">
+              {latestSnapshot.month}月
+            </span>）における各年の年齢3区分比率です。行をクリックすると上の人口ピラミッドがその年へ切り替わります。
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <span class="inline-flex items-center gap-1.5 text-slate-700">
+            <span class="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+            年少（0〜14歳）
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-slate-700">
+            <span class="inline-block h-2.5 w-2.5 rounded-sm bg-[#244666]" />
+            生産年齢（15〜64歳）
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-slate-700">
+            <span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-500" />
+            老年（65歳以上）
+          </span>
+        </div>
+      </div>
+
+      <div id="composition-rows" class="mt-4 space-y-2" />
+    </section>
+
+    <!-- Section 4: Source Archives -->
+    <details class="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+      <summary class="cursor-pointer text-sm font-bold text-slate-900">
+        収録している年別 LinkData オープンデータ一覧（{dataset.sources.length}年分・全
+        {dataset.range.snapshotCount}ファイル）
+      </summary>
+      <p class="mt-2 text-xs text-slate-600">
+        各年のファイルはクリエイティブ・コモンズ・ライセンス 表示 3.0 非移植（CC BY 3.0）のもと公開されています。
+      </p>
+      <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        {dataset.sources.map((src) => (
+          <a
+            href={src.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded-xl border border-slate-200 bg-white p-3 text-xs transition hover:border-alps-400 hover:shadow-sm"
+          >
+            <p class="font-bold text-alps-900">
+              {src.year}年（{src.eraLabel}）
+            </p>
+            <p class="mt-0.5 text-slate-600">収録: {src.monthCount}か月分</p>
+            <p class="mt-1 font-mono text-[11px] text-alps-700">
+              {src.workId} ↗
+            </p>
+          </a>
+        ))}
+      </div>
+    </details>
+  </div>
+
+  <script
+    id="population-data"
+    type="application/json"
+    set:html={embeddedJson}
+  />
+
+  <script>
+    import {
+      type AgeBandRow,
+      type AgeGranularity,
+      aggregateBands,
+      buildTrendSeries,
+      type CompareMode,
+      computeGlobalMaxBandSide,
+      computeSnapshotMetrics,
+      DECADE_TREND_GROUPS,
+      findDecadeTrendGroupForBand,
+      formatYmJa,
+      resolveComparisonSnapshot,
+      resolveSnapshotForYearMonth,
+      THREE_TIER_TREND_GROUPS,
+      type TrendCadence,
+      type TrendCategoryMode,
+      type TrendGroupSpec,
+      type TrendPoint,
+    } from "@/lib/population-analytics";
+    import type {
+      PopulationDataset,
+      PopulationSnapshot,
+    } from "@/lib/population-schema";
+
+    const dataScript = document.getElementById("population-data");
+    if (!dataScript?.textContent) {
+      throw new Error("Missing embedded population data");
+    }
+    const dataset: PopulationDataset = JSON.parse(dataScript.textContent);
+    const snapshots = dataset.snapshots;
+    const snapshotIndexByYm = new Map<string, number>(
+      snapshots.map((s, idx) => [s.ym, idx]),
+    );
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    function svgEl<K extends keyof SVGElementTagNameMap>(
+      tag: K,
+      attrs: Record<string, string | number>,
+      text?: string,
+    ): SVGElementTagNameMap[K] {
+      const node = document.createElementNS(SVG_NS, tag);
+      for (const [key, val] of Object.entries(attrs)) {
+        node.setAttribute(key, String(val));
+      }
+      if (text !== undefined) {
+        node.textContent = text;
+      }
+      return node;
+    }
+
+    function htmlEl<K extends keyof HTMLElementTagNameMap>(
+      tag: K,
+      className?: string,
+      text?: string,
+    ): HTMLElementTagNameMap[K] {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function formatSignedInt(diff: number): string {
+      const prefix = diff > 0 ? "+" : "";
+      return `${prefix}${diff.toLocaleString("ja-JP")}人`;
+    }
+
+    function formatSignedPct(diff: number, suffix = "%"): string {
+      const prefix = diff > 0 ? "+" : "";
+      return `${prefix}${diff.toFixed(1)}${suffix}`;
+    }
+
+    function computeNiceMax(rawMax: number): number {
+      if (rawMax <= 0) return 10;
+      const magnitude = 10 ** Math.floor(Math.log10(rawMax));
+      const norm = rawMax / magnitude;
+      let step = 1;
+      if (norm <= 1.2) step = 1.2;
+      else if (norm <= 1.5) step = 1.5;
+      else if (norm <= 2) step = 2;
+      else if (norm <= 2.5) step = 2.5;
+      else if (norm <= 3) step = 3;
+      else if (norm <= 4) step = 4;
+      else if (norm <= 5) step = 5;
+      else if (norm <= 6) step = 6;
+      else if (norm <= 8) step = 8;
+      else step = 10;
+      return Math.ceil(step * magnitude);
+    }
+
+    function computeNiceRange(minVal: number, maxVal: number, isPercent = false): {
+      min: number;
+      max: number;
+      ticks: number[];
+    } {
+      if (minVal === maxVal) {
+        const pad = isPercent ? 2 : Math.max(100, Math.round(maxVal * 0.1));
+        const min = Math.max(0, minVal - pad);
+        const max = maxVal + pad;
+        const step = (max - min) / 4;
+        return {
+          min,
+          max,
+          ticks: [0, 1, 2, 3, 4].map((i) => min + step * i),
+        };
+      }
+
+      const span = maxVal - minVal;
+      const rawStep = span / 4;
+      const mag = 10 ** Math.floor(Math.log10(rawStep));
+      const norm = rawStep / mag;
+      let niceStep = mag;
+      if (norm <= 1) niceStep = 1 * mag;
+      else if (norm <= 2) niceStep = 2 * mag;
+      else if (norm <= 2.5) niceStep = 2.5 * mag;
+      else if (norm <= 5) niceStep = 5 * mag;
+      else niceStep = 10 * mag;
+
+      const padding = span * 0.12;
+      const min = Math.max(
+        0,
+        Math.floor((minVal - padding) / niceStep) * niceStep,
+      );
+      const max = Math.ceil((maxVal + padding) / niceStep) * niceStep;
+      const tickCount = Math.max(2, Math.round((max - min) / niceStep));
+      const ticks: number[] = [];
+      for (let i = 0; i <= tickCount; i++) {
+        ticks.push(min + i * niceStep);
+      }
+      return { min, max, ticks };
+    }
+
+    const globalMaxCache = new Map<AgeGranularity, number>();
+    function getGlobalMax(granularity: AgeGranularity): number {
+      const cached = globalMaxCache.get(granularity);
+      if (cached !== undefined) return cached;
+      const computed = computeGlobalMaxBandSide(snapshots, granularity);
+      globalMaxCache.set(granularity, computed);
+      return computed;
+    }
+
+    // Application state
+    let currentIndex = snapshots.length - 1;
+    let granularity: AgeGranularity = "decade";
+    let compareMode: CompareMode = "start_2017";
+    let axisMode: "fixed" | "auto" = "fixed";
+    let inspectedBandId: string | null = null;
+
+    let trendMode: TrendCategoryMode = "decade";
+    let selectedTrendGroupId = "all";
+    let trendCadence: TrendCadence = "annual_same_month";
+    let trendSeriesKind: "gender" | "total" | "share" = "gender";
+    let hoveredTrendYm: string | null = null;
+
+    let playMode: "annual" | "monthly" = "annual";
+    let playTimerId: number | null = null;
+
+    // DOM refs
+    const pyramidCurrentLabel = document.getElementById("pyramid-current-label");
+    const pyramidCompareLegend = document.getElementById(
+      "pyramid-compare-legend",
+    );
+    const pyramidCompareNote = document.getElementById("pyramid-compare-note");
+    const yearMonthClampNote = document.getElementById("year-month-clamp-note");
+    const summaryCardsEl = document.getElementById("summary-cards");
+    const bandInspectorEl = document.getElementById("band-inspector");
+    const pyramidSvgEl = document.getElementById(
+      "pyramid-svg",
+    ) as SVGSVGElement | null;
+    const pyramidTableBody = document.getElementById("pyramid-table-body");
+    const pyramidTableDiffHeader = document.getElementById(
+      "pyramid-table-diff-header",
+    );
+    const monthSelect = document.getElementById(
+      "month-select",
+    ) as HTMLSelectElement | null;
+    const timelineSlider = document.getElementById(
+      "timeline-slider",
+    ) as HTMLInputElement | null;
+    const playToggleBtn = document.getElementById(
+      "play-toggle-btn",
+    ) as HTMLButtonElement | null;
+
+    const trendActiveLabel = document.getElementById("trend-active-label");
+    const trendGroupButtonsEl = document.getElementById("trend-group-buttons");
+    const trendSummaryCardsEl = document.getElementById("trend-summary-cards");
+    const trendLegendEl = document.getElementById("trend-legend");
+    const trendInspectorEl = document.getElementById("trend-inspector");
+    const trendSvgEl = document.getElementById(
+      "trend-svg",
+    ) as SVGSVGElement | null;
+
+    const compositionMonthLabel = document.getElementById(
+      "composition-month-label",
+    );
+    const compositionRowsEl = document.getElementById("composition-rows");
+
+    const granularityButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-granularity-btn]"),
+    );
+    const compareButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-compare-btn]"),
+    );
+    const axisButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-axis-btn]"),
+    );
+    const yearButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-year-btn]"),
+    );
+    const playModeButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-play-mode-btn]"),
+    );
+    const trendModeButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-trend-mode-btn]"),
+    );
+    const cadenceButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-cadence-btn]"),
+    );
+    const seriesButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-series-btn]"),
+    );
+
+    function setButtonGroupState(
+      buttons: HTMLButtonElement[],
+      activeAttr: string,
+      activeValue: string,
+      variant: "rect" | "pill" | "compact",
+    ): void {
+      for (const btn of buttons) {
+        const isActive = btn.getAttribute(activeAttr) === activeValue;
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+        if (variant === "rect") {
+          btn.className = isActive
+            ? "rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+            : "rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+        } else if (variant === "compact") {
+          btn.className = isActive
+            ? "rounded-lg bg-alps-900 px-2.5 py-1 text-xs font-semibold text-white transition"
+            : "rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+        } else {
+          btn.className = isActive
+            ? "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+            : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+        }
+      }
+    }
+
+    function stopPlayback(): void {
+      if (playTimerId !== null) {
+        window.clearInterval(playTimerId);
+        playTimerId = null;
+      }
+      if (playToggleBtn) {
+        playToggleBtn.setAttribute("aria-pressed", "false");
+        playToggleBtn.textContent = "▶ 10年変化を再生";
+      }
+    }
+
+    function getCurrentSnapshot(): PopulationSnapshot {
+      const snap = snapshots[currentIndex] ?? snapshots[snapshots.length - 1];
+      if (!snap) {
+        throw new Error("Empty snapshots");
+      }
+      return snap;
+    }
+
+    function selectYearMonth(year: number, month: number, stopAuto = true): void {
+      if (stopAuto) stopPlayback();
+      const resolved = resolveSnapshotForYearMonth(snapshots, year, month);
+      const idx = snapshotIndexByYm.get(resolved.ym);
+      if (idx !== undefined) {
+        currentIndex = idx;
+      }
+      if (yearMonthClampNote) {
+        if (resolved.year !== year || resolved.month !== month) {
+          yearMonthClampNote.textContent = `※ ${year}年${month}月は未収録のため、同年の最新収録月（${resolved.year}年${resolved.month}月）を表示しています。`;
+          yearMonthClampNote.classList.remove("hidden");
+        } else {
+          yearMonthClampNote.classList.add("hidden");
+        }
+      }
+      renderAll();
+    }
+
+    function renderSummaryCards(
+      current: PopulationSnapshot,
+      compareSnap: PopulationSnapshot | null,
+    ): void {
+      if (!summaryCardsEl) return;
+      const curMetrics = computeSnapshotMetrics(current);
+      const cmpMetrics = compareSnap
+        ? computeSnapshotMetrics(compareSnap)
+        : null;
+
+      summaryCardsEl.replaceChildren();
+
+      const totalDiff = compareSnap ? current.total - compareSnap.total : null;
+      const workingDiff = cmpMetrics
+        ? curMetrics.workingCount - cmpMetrics.workingCount
+        : null;
+      const elderlyPctDiff = cmpMetrics
+        ? Math.round((curMetrics.elderlyPct - cmpMetrics.elderlyPct) * 10) / 10
+        : null;
+      const avgAgeDiff = cmpMetrics
+        ? Math.round((curMetrics.averageAge - cmpMetrics.averageAge) * 10) / 10
+        : null;
+
+      const cards: Array<{ title: string; value: string; sub: string }> = [
+        {
+          title: "総人口",
+          value: `${current.total.toLocaleString("ja-JP")} 人`,
+          sub:
+            totalDiff !== null && compareSnap
+              ? `男 ${current.male.toLocaleString("ja-JP")} / 女 ${current.female.toLocaleString("ja-JP")}（${compareSnap.year}年比 ${formatSignedInt(totalDiff)}）`
+              : `男 ${current.male.toLocaleString("ja-JP")} / 女 ${current.female.toLocaleString("ja-JP")}`,
+        },
+        {
+          title: "生産年齢人口（15〜64歳）",
+          value: `${curMetrics.workingPct.toFixed(1)}%`,
+          sub:
+            workingDiff !== null && compareSnap
+              ? `${curMetrics.workingCount.toLocaleString("ja-JP")} 人（${compareSnap.year}年比 ${formatSignedInt(workingDiff)}）`
+              : `${curMetrics.workingCount.toLocaleString("ja-JP")} 人（年少 ${curMetrics.youthPct.toFixed(1)}%）`,
+        },
+        {
+          title: "高齢化率（65歳以上）",
+          value: `${curMetrics.elderlyPct.toFixed(1)}%`,
+          sub:
+            elderlyPctDiff !== null && compareSnap
+              ? `${curMetrics.elderlyCount.toLocaleString("ja-JP")} 人（${compareSnap.year}年比 ${formatSignedPct(elderlyPctDiff, "pt")}）`
+              : `${curMetrics.elderlyCount.toLocaleString("ja-JP")} 人（75歳〜 ${curMetrics.lateElderlyPct.toFixed(1)}%）`,
+        },
+        {
+          title: "平均年齢 / 中央値",
+          value: `${curMetrics.averageAge.toFixed(1)}歳 / ${curMetrics.medianAge}歳`,
+          sub:
+            avgAgeDiff !== null && compareSnap
+              ? `最多年齢: ${curMetrics.peakAge.age}歳（平均 ${formatSignedPct(avgAgeDiff, "歳")}）`
+              : `最多年齢: ${curMetrics.peakAge.age}歳（${curMetrics.peakAge.total.toLocaleString("ja-JP")}人）`,
+        },
+      ];
+
+      for (const card of cards) {
+        const box = htmlEl(
+          "div",
+          "rounded-xl border border-slate-200 bg-slate-50/70 p-3.5",
+        );
+        box.append(
+          htmlEl("p", "text-[11px] font-medium text-slate-500", card.title),
+          htmlEl("p", "mt-0.5 text-lg font-bold text-slate-900", card.value),
+          htmlEl("p", "mt-0.5 text-[11px] text-slate-600", card.sub),
+        );
+        summaryCardsEl.appendChild(box);
+      }
+    }
+
+    function renderBandInspector(
+      band: AgeBandRow | null,
+      compareBand: AgeBandRow | null,
+      compareSnap: PopulationSnapshot | null,
+    ): void {
+      if (!bandInspectorEl) return;
+      bandInspectorEl.replaceChildren();
+
+      if (!band) {
+        const msg = htmlEl(
+          "span",
+          "text-slate-600",
+          "年代バーにカーソルを合わせるかクリックすると、男女別の人数・構成比・比較差を確認し、下の推移グラフを連動できます。",
+        );
+        bandInspectorEl.appendChild(msg);
+        return;
+      }
+
+      const left = htmlEl("div", "flex flex-wrap items-center gap-x-4 gap-y-1");
+      left.append(
+        htmlEl("span", "font-bold text-alps-950", band.label),
+        htmlEl(
+          "span",
+          "font-semibold text-slate-800",
+          `計 ${band.total.toLocaleString("ja-JP")}人（${band.sharePct.toFixed(1)}%）`,
+        ),
+        htmlEl(
+          "span",
+          "text-[#244666] font-medium",
+          `男 ${band.male.toLocaleString("ja-JP")}人（${band.maleSharePct.toFixed(1)}%）`,
+        ),
+        htmlEl(
+          "span",
+          "text-[#b23b56] font-medium",
+          `女 ${band.female.toLocaleString("ja-JP")}人（${(100 - band.maleSharePct).toFixed(1)}%）`,
+        ),
+      );
+
+      if (compareBand && compareSnap) {
+        const diff = band.total - compareBand.total;
+        left.append(
+          htmlEl(
+            "span",
+            `font-semibold ${diff >= 0 ? "text-emerald-700" : "text-rose-700"}`,
+            `${compareSnap.year}年比 ${formatSignedInt(diff)}`,
+          ),
+        );
+      }
+
+      const targetDecadeId = findDecadeTrendGroupForBand(band);
+      const targetSpec = DECADE_TREND_GROUPS.find((g) => g.id === targetDecadeId);
+
+      const actionBtn = htmlEl(
+        "button",
+        "rounded-lg bg-white px-2.5 py-1 text-[11px] font-semibold text-alps-800 ring-1 ring-alps-300 transition hover:bg-alps-100",
+        `${targetSpec?.label ?? targetDecadeId} の推移グラフへ ↓`,
+      );
+      actionBtn.type = "button";
+      actionBtn.addEventListener("click", () => {
+        trendMode = "decade";
+        selectedTrendGroupId = targetDecadeId;
+        renderTrendSection();
+        document
+          .getElementById("trend-section")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      bandInspectorEl.append(left, actionBtn);
+    }
+
+    function renderPyramid(
+      current: PopulationSnapshot,
+      compareSnap: PopulationSnapshot | null,
+    ): void {
+      if (!pyramidSvgEl) return;
+
+      const bands = aggregateBands(current, granularity);
+      const compareBands = compareSnap
+        ? aggregateBands(compareSnap, granularity)
+        : null;
+      const compareBandMap = compareBands
+        ? new Map<string, AgeBandRow>(compareBands.map((b) => [b.id, b]))
+        : null;
+
+      if (inspectedBandId && !bands.some((b) => b.id === inspectedBandId)) {
+        inspectedBandId = null;
+      }
+
+      let rawMaxSide = 0;
+      if (axisMode === "fixed") {
+        rawMaxSide = getGlobalMax(granularity);
+      } else {
+        for (const b of bands) {
+          if (b.male > rawMaxSide) rawMaxSide = b.male;
+          if (b.female > rawMaxSide) rawMaxSide = b.female;
+        }
+        if (compareBands) {
+          for (const b of compareBands) {
+            if (b.male > rawMaxSide) rawMaxSide = b.male;
+            if (b.female > rawMaxSide) rawMaxSide = b.female;
+          }
+        }
+      }
+      const maxSide = computeNiceMax(rawMaxSide);
+
+      const rowHeight =
+        granularity === "decade" ? 31 : granularity === "five_year" ? 23 : 5.2;
+      const topPad = 34;
+      const bottomPad = 42;
+      const plotHeight = bands.length * rowHeight;
+      const viewHeight = Math.ceil(topPad + plotHeight + bottomPad);
+
+      const width = 820;
+      const centerLeft = 365;
+      const centerRight = 455;
+      const outerMargin = 68;
+      const sideMaxWidth = centerLeft - outerMargin; // 297px
+
+      pyramidSvgEl.setAttribute("viewBox", `0 0 ${width} ${viewHeight}`);
+      pyramidSvgEl.replaceChildren();
+
+      // Column headers
+      pyramidSvgEl.append(
+        svgEl(
+          "text",
+          {
+            x: centerLeft - 8,
+            y: 19,
+            "text-anchor": "end",
+            "font-size": 12,
+            "font-weight": 700,
+            fill: "#244666",
+          },
+          "← 男性（人）",
+        ),
+        svgEl(
+          "text",
+          {
+            x: (centerLeft + centerRight) / 2,
+            y: 19,
+            "text-anchor": "middle",
+            "font-size": 11,
+            "font-weight": 700,
+            fill: "#475569",
+          },
+          "年齢階級",
+        ),
+        svgEl(
+          "text",
+          {
+            x: centerRight + 8,
+            y: 19,
+            "text-anchor": "start",
+            "font-size": 12,
+            "font-weight": 700,
+            fill: "#b23b56",
+          },
+          "女性（人） →",
+        ),
+      );
+
+      // Vertical X gridlines & axis labels
+      const tickFractions = [0, 0.5, 1];
+      for (const frac of tickFractions) {
+        const tickVal = Math.round(maxSide * frac);
+        const offset = sideMaxWidth * frac;
+        const leftX = centerLeft - offset;
+        const rightX = centerRight + offset;
+
+        for (const gx of [leftX, rightX]) {
+          pyramidSvgEl.appendChild(
+            svgEl("line", {
+              x1: gx,
+              y1: topPad,
+              x2: gx,
+              y2: topPad + plotHeight,
+              stroke: frac === 0 ? "#94a3b8" : "#e2e8f0",
+              "stroke-width": frac === 0 ? 1.2 : 1,
+            }),
+          );
+        }
+
+        const labelY = topPad + plotHeight + 18;
+        pyramidSvgEl.append(
+          svgEl(
+            "text",
+            {
+              x: leftX,
+              y: labelY,
+              "text-anchor": "middle",
+              "font-size": 10.5,
+              fill: "#64748b",
+            },
+            tickVal.toLocaleString("ja-JP"),
+          ),
+          svgEl(
+            "text",
+            {
+              x: rightX,
+              y: labelY,
+              "text-anchor": "middle",
+              "font-size": 10.5,
+              fill: "#64748b",
+            },
+            tickVal.toLocaleString("ja-JP"),
+          ),
+        );
+      }
+
+      // Draw rows from oldest at top (index bands.length - 1) to youngest at bottom (index 0)
+      const totalRows = bands.length;
+      const singleCompareMalePts: string[] = [];
+      const singleCompareFemalePts: string[] = [];
+
+      for (let i = 0; i < totalRows; i++) {
+        const band = bands[totalRows - 1 - i];
+        if (!band) continue;
+        const cmpBand = compareBandMap?.get(band.id) ?? null;
+
+        const rowTop = topPad + i * rowHeight;
+        const barPad = granularity === "single" ? 0.4 : 3.5;
+        const barH = Math.max(2, rowHeight - barPad * 2);
+        const barY = rowTop + barPad;
+
+        const maleW = (band.male / maxSide) * sideMaxWidth;
+        const femaleW = (band.female / maxSide) * sideMaxWidth;
+        const maleX = centerLeft - maleW;
+        const femaleX = centerRight;
+        const isSelected = inspectedBandId === band.id;
+
+        const rowGroup = svgEl("g", {
+          class: "cursor-pointer outline-none",
+          tabindex: "0",
+          role: "button",
+          "aria-label": `${band.label} 総数 ${band.total.toLocaleString("ja-JP")}人 男性 ${band.male.toLocaleString("ja-JP")}人 女性 ${band.female.toLocaleString("ja-JP")}人`,
+        });
+
+        const hoverBg = svgEl("rect", {
+          x: outerMargin - 20,
+          y: rowTop,
+          width: width - (outerMargin - 20) * 2,
+          height: rowHeight,
+          rx: granularity === "single" ? 0 : 4,
+          fill: isSelected ? "rgba(59, 107, 148, 0.12)" : "transparent",
+        });
+        rowGroup.appendChild(hoverBg);
+
+        if (granularity === "single" && band.minAge % 10 === 0) {
+          pyramidSvgEl.appendChild(
+            svgEl("line", {
+              x1: outerMargin,
+              y1: rowTop + rowHeight,
+              x2: width - outerMargin,
+              y2: rowTop + rowHeight,
+              stroke: "#e2e8f0",
+              "stroke-width": 0.8,
+              "stroke-dasharray": "2 2",
+            }),
+          );
+        }
+
+        // Male & Female bars
+        rowGroup.append(
+          svgEl("rect", {
+            x: maleX,
+            y: barY,
+            width: Math.max(0.5, maleW),
+            height: barH,
+            rx: granularity === "single" ? 0.5 : 3,
+            fill: isSelected ? "#1b344d" : "#244666",
+          }),
+          svgEl("rect", {
+            x: femaleX,
+            y: barY,
+            width: Math.max(0.5, femaleW),
+            height: barH,
+            rx: granularity === "single" ? 0.5 : 3,
+            fill: isSelected ? "#b23b56" : "#cf4f6b",
+          }),
+        );
+
+        // Comparison overlay
+        if (cmpBand) {
+          const cmpMaleW = (cmpBand.male / maxSide) * sideMaxWidth;
+          const cmpFemaleW = (cmpBand.female / maxSide) * sideMaxWidth;
+
+          if (granularity === "single") {
+            const cy = rowTop + rowHeight / 2;
+            singleCompareMalePts.push(`${(centerLeft - cmpMaleW).toFixed(1)},${cy.toFixed(1)}`);
+            singleCompareFemalePts.push(`${(centerRight + cmpFemaleW).toFixed(1)},${cy.toFixed(1)}`);
+          } else {
+            rowGroup.append(
+              svgEl("rect", {
+                x: centerLeft - cmpMaleW,
+                y: barY,
+                width: Math.max(0.5, cmpMaleW),
+                height: barH,
+                rx: 3,
+                fill: "none",
+                stroke: "#d97706",
+                "stroke-width": 1.6,
+                "stroke-dasharray": "3 2",
+              }),
+              svgEl("rect", {
+                x: centerRight,
+                y: barY,
+                width: Math.max(0.5, cmpFemaleW),
+                height: barH,
+                rx: 3,
+                fill: "none",
+                stroke: "#d97706",
+                "stroke-width": 1.6,
+                "stroke-dasharray": "3 2",
+              }),
+            );
+          }
+        }
+
+        // Center age label
+        const showCenterLabel =
+          granularity !== "single" || band.minAge % 10 === 0;
+        if (showCenterLabel) {
+          rowGroup.appendChild(
+            svgEl(
+              "text",
+              {
+                x: (centerLeft + centerRight) / 2,
+                y: rowTop + rowHeight / 2 + 3.5,
+                "text-anchor": "middle",
+                "font-size": granularity === "decade" ? 11.5 : 10,
+                "font-weight": isSelected ? 700 : 600,
+                fill: isSelected ? "#0c1724" : "#334155",
+              },
+              band.shortLabel,
+            ),
+          );
+        }
+
+        // Outer value labels for decade and five_year
+        if (granularity !== "single") {
+          const valFontSize = granularity === "decade" ? 10.5 : 9.5;
+          const cmpMaleMax = cmpBand
+            ? (cmpBand.male / maxSide) * sideMaxWidth
+            : 0;
+          const cmpFemaleMax = cmpBand
+            ? (cmpBand.female / maxSide) * sideMaxWidth
+            : 0;
+          const leftTip = centerLeft - Math.max(maleW, cmpMaleMax);
+          const rightTip = centerRight + Math.max(femaleW, cmpFemaleMax);
+
+          rowGroup.append(
+            svgEl(
+              "text",
+              {
+                x: leftTip - 5,
+                y: rowTop + rowHeight / 2 + 3.5,
+                "text-anchor": "end",
+                "font-size": valFontSize,
+                fill: "#334155",
+              },
+              band.male.toLocaleString("ja-JP"),
+            ),
+            svgEl(
+              "text",
+              {
+                x: rightTip + 5,
+                y: rowTop + rowHeight / 2 + 3.5,
+                "text-anchor": "start",
+                "font-size": valFontSize,
+                fill: "#334155",
+              },
+              band.female.toLocaleString("ja-JP"),
+            ),
+          );
+        }
+
+        const activatePreview = () => {
+          renderBandInspector(band, cmpBand, compareSnap);
+        };
+        rowGroup.addEventListener("mouseenter", activatePreview);
+        rowGroup.addEventListener("focus", activatePreview);
+        rowGroup.addEventListener("click", () => {
+          inspectedBandId = band.id;
+          trendMode = "decade";
+          selectedTrendGroupId = findDecadeTrendGroupForBand(band);
+          renderBandInspector(band, cmpBand, compareSnap);
+          renderPyramid(current, compareSnap);
+          renderTrendSection();
+        });
+
+        pyramidSvgEl.appendChild(rowGroup);
+      }
+
+      if (granularity === "single" && compareSnap) {
+        if (singleCompareMalePts.length > 1) {
+          pyramidSvgEl.appendChild(
+            svgEl("polyline", {
+              points: singleCompareMalePts.join(" "),
+              fill: "none",
+              stroke: "#d97706",
+              "stroke-width": 1.8,
+              "stroke-dasharray": "4 2",
+              "pointer-events": "none",
+            }),
+          );
+        }
+        if (singleCompareFemalePts.length > 1) {
+          pyramidSvgEl.appendChild(
+            svgEl("polyline", {
+              points: singleCompareFemalePts.join(" "),
+              fill: "none",
+              stroke: "#d97706",
+              "stroke-width": 1.8,
+              "stroke-dasharray": "4 2",
+              "pointer-events": "none",
+            }),
+          );
+        }
+      }
+
+      const activeBand =
+        (inspectedBandId
+          ? bands.find((b) => b.id === inspectedBandId)
+          : bands.find((b) => b.minAge <= 30 && b.maxAge >= 30)) ??
+        bands[0] ??
+        null;
+      const activeCmpBand = activeBand
+        ? (compareBandMap?.get(activeBand.id) ?? null)
+        : null;
+      renderBandInspector(activeBand, activeCmpBand, compareSnap);
+    }
+
+    function renderPyramidTable(
+      current: PopulationSnapshot,
+      compareSnap: PopulationSnapshot | null,
+    ): void {
+      if (!pyramidTableBody) return;
+      const bands = aggregateBands(current, granularity);
+      const cmpBands = compareSnap
+        ? aggregateBands(compareSnap, granularity)
+        : null;
+      const cmpMap = cmpBands
+        ? new Map<string, AgeBandRow>(cmpBands.map((b) => [b.id, b]))
+        : null;
+
+      if (pyramidTableDiffHeader) {
+        pyramidTableDiffHeader.textContent = compareSnap
+          ? `${compareSnap.year}年${compareSnap.month}月比`
+          : "比較差";
+      }
+
+      pyramidTableBody.replaceChildren();
+      for (const band of bands) {
+        const cmpBand = cmpMap?.get(band.id) ?? null;
+        const tr = htmlEl("tr", "hover:bg-slate-100/70");
+        const diffCell = htmlEl("td", "pl-3 py-1.5 text-right font-mono");
+        if (cmpBand) {
+          const diff = band.total - cmpBand.total;
+          diffCell.textContent = formatSignedInt(diff);
+          diffCell.className +=
+            diff >= 0 ? " text-emerald-700" : " text-rose-700";
+        } else {
+          diffCell.textContent = "—";
+          diffCell.className += " text-slate-400";
+        }
+
+        tr.append(
+          htmlEl("td", "py-1.5 pr-3 font-medium text-slate-800", band.label),
+          htmlEl(
+            "td",
+            "px-3 py-1.5 text-right font-mono font-semibold text-slate-900",
+            band.total.toLocaleString("ja-JP"),
+          ),
+          htmlEl(
+            "td",
+            "px-3 py-1.5 text-right font-mono text-[#244666]",
+            band.male.toLocaleString("ja-JP"),
+          ),
+          htmlEl(
+            "td",
+            "px-3 py-1.5 text-right font-mono text-[#b23b56]",
+            band.female.toLocaleString("ja-JP"),
+          ),
+          htmlEl(
+            "td",
+            "px-3 py-1.5 text-right font-mono text-slate-600",
+            `${band.sharePct.toFixed(1)}%`,
+          ),
+          diffCell,
+        );
+        pyramidTableBody.appendChild(tr);
+      }
+    }
+
+    function getActiveTrendSpecs(): readonly TrendGroupSpec[] {
+      return trendMode === "decade"
+        ? DECADE_TREND_GROUPS
+        : THREE_TIER_TREND_GROUPS;
+    }
+
+    function getActiveTrendSpec(): TrendGroupSpec {
+      const specs = getActiveTrendSpecs();
+      return (
+        specs.find((g) => g.id === selectedTrendGroupId) ??
+        specs[0] ?? {
+          id: "all",
+          label: "全年齢",
+          shortLabel: "全年齢",
+          minAge: 0,
+          maxAge: 109,
+          description: "",
+        }
+      );
+    }
+
+    function renderTrendInspector(
+      point: TrendPoint | null,
+      spec: TrendGroupSpec,
+    ): void {
+      if (!trendInspectorEl) return;
+      trendInspectorEl.replaceChildren();
+      if (!point) {
+        trendInspectorEl.textContent = "データポイントがありません。";
+        return;
+      }
+
+      const wrap = htmlEl("div", "flex flex-wrap items-center gap-x-4 gap-y-1");
+      wrap.append(
+        htmlEl(
+          "span",
+          "font-bold text-alps-950",
+          `${formatYmJa(point.ym, false)}（${spec.label}）`,
+        ),
+        htmlEl(
+          "span",
+          "font-semibold text-slate-900",
+          `総数 ${point.total.toLocaleString("ja-JP")}人`,
+        ),
+        htmlEl(
+          "span",
+          "font-medium text-[#244666]",
+          `男 ${point.male.toLocaleString("ja-JP")}人`,
+        ),
+        htmlEl(
+          "span",
+          "font-medium text-[#b23b56]",
+          `女 ${point.female.toLocaleString("ja-JP")}人`,
+        ),
+        htmlEl(
+          "span",
+          "text-teal-800 font-medium",
+          `全人口比 ${point.sharePct.toFixed(1)}%`,
+        ),
+        htmlEl(
+          "span",
+          `font-medium ${point.diffFromStart >= 0 ? "text-emerald-700" : "text-rose-700"}`,
+          `開始比 ${formatSignedInt(point.diffFromStart)}（${formatSignedPct(point.pctFromStart)}）`,
+        ),
+      );
+      trendInspectorEl.appendChild(wrap);
+    }
+
+    function renderTrendSection(): void {
+      const current = getCurrentSnapshot();
+      const specs = getActiveTrendSpecs();
+      if (!specs.some((s) => s.id === selectedTrendGroupId)) {
+        selectedTrendGroupId = specs[0]?.id ?? "all";
+      }
+      const spec = getActiveTrendSpec();
+
+      setButtonGroupState(
+        trendModeButtons,
+        "data-trend-mode-btn",
+        trendMode,
+        "rect",
+      );
+      setButtonGroupState(
+        cadenceButtons,
+        "data-cadence-btn",
+        trendCadence,
+        "pill",
+      );
+      setButtonGroupState(
+        seriesButtons,
+        "data-series-btn",
+        trendSeriesKind,
+        "pill",
+      );
+
+      if (trendActiveLabel) {
+        trendActiveLabel.textContent = `${spec.label}（${spec.minAge}〜${spec.maxAge}歳）`;
+      }
+
+      if (trendGroupButtonsEl) {
+        trendGroupButtonsEl.replaceChildren();
+        for (const item of specs) {
+          const isActive = item.id === spec.id;
+          const btn = htmlEl(
+            "button",
+            isActive
+              ? "rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+              : "rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900",
+            item.shortLabel,
+          );
+          btn.type = "button";
+          btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+          btn.addEventListener("click", () => {
+            selectedTrendGroupId = item.id;
+            hoveredTrendYm = null;
+            renderTrendSection();
+          });
+          trendGroupButtonsEl.appendChild(btn);
+        }
+      }
+
+      const series = buildTrendSeries(
+        snapshots,
+        spec.minAge,
+        spec.maxAge,
+        trendCadence,
+        current.month,
+      );
+
+      if (trendSummaryCardsEl && series.length > 0) {
+        trendSummaryCardsEl.replaceChildren();
+        const activePt =
+          series.find((pt) => pt.ym === current.ym) ??
+          series[series.length - 1];
+        const firstPt = series[0];
+        const lastPt = series[series.length - 1];
+
+        let maxPt = series[0];
+        let minPt = series[0];
+        for (const pt of series) {
+          if (maxPt && pt.total > maxPt.total) maxPt = pt;
+          if (minPt && pt.total < minPt.total) minPt = pt;
+        }
+
+        if (activePt && firstPt && lastPt && maxPt && minPt) {
+          const maleShare =
+            activePt.total > 0
+              ? ((activePt.male / activePt.total) * 100).toFixed(1)
+              : "0.0";
+          const femaleShare =
+            activePt.total > 0
+              ? ((activePt.female / activePt.total) * 100).toFixed(1)
+              : "0.0";
+
+          const cards: Array<{ title: string; value: string; sub: string }> = [
+            {
+              title: `${formatYmJa(activePt.ym, false)}の人口（${spec.label}）`,
+              value: `${activePt.total.toLocaleString("ja-JP")} 人`,
+              sub: `全人口比 ${activePt.sharePct.toFixed(1)}% / 男 ${maleShare}%・女 ${femaleShare}%`,
+            },
+            {
+              title: `${formatYmJa(firstPt.ym, false)} → ${formatYmJa(lastPt.ym, false)}の変化`,
+              value: `${formatSignedInt(lastPt.diffFromStart)}`,
+              sub: `変化率 ${formatSignedPct(lastPt.pctFromStart)}（${firstPt.total.toLocaleString("ja-JP")} → ${lastPt.total.toLocaleString("ja-JP")}人）`,
+            },
+            {
+              title: "表示期間内の最多 / 最少",
+              value: `${maxPt.total.toLocaleString("ja-JP")} / ${minPt.total.toLocaleString("ja-JP")} 人`,
+              sub: `最多 ${formatYmJa(maxPt.ym, false)} ・ 最少 ${formatYmJa(minPt.ym, false)}`,
+            },
+          ];
+
+          for (const card of cards) {
+            const box = htmlEl(
+              "div",
+              "rounded-xl border border-slate-200 bg-slate-50/70 p-3.5",
+            );
+            box.append(
+              htmlEl("p", "text-[11px] font-medium text-slate-500", card.title),
+              htmlEl(
+                "p",
+                "mt-0.5 text-base font-bold text-slate-900 sm:text-lg",
+                card.value,
+              ),
+              htmlEl("p", "mt-0.5 text-[11px] text-slate-600", card.sub),
+            );
+            trendSummaryCardsEl.appendChild(box);
+          }
+        }
+      }
+
+      if (trendLegendEl) {
+        trendLegendEl.replaceChildren();
+        const addLegendItem = (color: string, label: string) => {
+          const item = htmlEl(
+            "span",
+            "inline-flex items-center gap-1.5 font-medium text-slate-700",
+          );
+          const swatch = htmlEl("span", "inline-block h-2.5 w-4 rounded-sm");
+          swatch.style.backgroundColor = color;
+          item.append(swatch, document.createTextNode(label));
+          trendLegendEl.appendChild(item);
+        };
+        if (trendSeriesKind === "gender") {
+          addLegendItem("#244666", "男性（人）");
+          addLegendItem("#cf4f6b", "女性（人）");
+        } else if (trendSeriesKind === "total") {
+          addLegendItem("#244666", `${spec.label} 総数（人）`);
+        } else {
+          addLegendItem("#0f766e", `${spec.label} 全人口比（%）`);
+        }
+      }
+
+      if (!trendSvgEl || series.length === 0) return;
+      trendSvgEl.replaceChildren();
+
+      const width = 820;
+      const height = 330;
+      const padLeft = 72;
+      const padRight = 24;
+      const padTop = 24;
+      const padBottom = 46;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      const values: number[] = [];
+      for (const pt of series) {
+        if (trendSeriesKind === "gender") {
+          values.push(pt.male, pt.female);
+        } else if (trendSeriesKind === "total") {
+          values.push(pt.total);
+        } else {
+          values.push(pt.sharePct);
+        }
+      }
+
+      const rawMin = Math.min(...values);
+      const rawMax = Math.max(...values);
+      const yRange = computeNiceRange(
+        rawMin,
+        rawMax,
+        trendSeriesKind === "share",
+      );
+      const ySpan = Math.max(0.1, yRange.max - yRange.min);
+
+      const xAt = (idx: number) =>
+        series.length <= 1
+          ? padLeft + plotW / 2
+          : padLeft + (idx / (series.length - 1)) * plotW;
+      const yAt = (val: number) =>
+        padTop + ((yRange.max - val) / ySpan) * plotH;
+
+      // Y gridlines & labels
+      for (const tick of yRange.ticks) {
+        const y = yAt(tick);
+        trendSvgEl.append(
+          svgEl("line", {
+            x1: padLeft,
+            y1: y,
+            x2: width - padRight,
+            y2: y,
+            stroke: "#e2e8f0",
+            "stroke-width": 1,
+          }),
+          svgEl(
+            "text",
+            {
+              x: padLeft - 8,
+              y: y + 3.5,
+              "text-anchor": "end",
+              "font-size": 10.5,
+              fill: "#64748b",
+            },
+            trendSeriesKind === "share"
+              ? `${tick.toFixed(1)}%`
+              : Math.round(tick).toLocaleString("ja-JP"),
+          ),
+        );
+      }
+
+      // X axis labels
+      for (let i = 0; i < series.length; i++) {
+        const pt = series[i];
+        if (!pt) continue;
+        const showTick =
+          trendCadence === "annual_same_month" || pt.month === 1;
+        if (!showTick) continue;
+        const x = xAt(i);
+        trendSvgEl.append(
+          svgEl("line", {
+            x1: x,
+            y1: padTop,
+            x2: x,
+            y2: padTop + plotH,
+            stroke: "#f1f5f9",
+            "stroke-width": 1,
+          }),
+          svgEl(
+            "text",
+            {
+              x,
+              y: padTop + plotH + 18,
+              "text-anchor": "middle",
+              "font-size": 10.5,
+              fill: pt.ym === current.ym ? "#0c1724" : "#64748b",
+              "font-weight": pt.ym === current.ym ? 700 : 400,
+            },
+            trendCadence === "annual_same_month"
+              ? `${pt.year}年`
+              : String(pt.year),
+          ),
+        );
+      }
+
+      // Vertical marker for current pyramid snapshot
+      const activeIdx = series.findIndex((pt) => pt.ym === current.ym);
+      if (activeIdx !== -1) {
+        const ax = xAt(activeIdx);
+        trendSvgEl.appendChild(
+          svgEl("line", {
+            x1: ax,
+            y1: padTop,
+            x2: ax,
+            y2: padTop + plotH,
+            stroke: "#d97706",
+            "stroke-width": 1.6,
+            "stroke-dasharray": "4 3",
+          }),
+        );
+      }
+
+      const drawPolyline = (
+        coords: Array<{ x: number; y: number; pt: TrendPoint }>,
+        stroke: string,
+        withArea: boolean,
+      ) => {
+        if (coords.length === 0) return;
+        if (withArea && coords.length > 1) {
+          const first = coords[0];
+          const last = coords[coords.length - 1];
+          if (first && last) {
+            const areaD = [
+              `M ${first.x.toFixed(1)} ${(padTop + plotH).toFixed(1)}`,
+              ...coords.map(
+                (c) => `L ${c.x.toFixed(1)} ${c.y.toFixed(1)}`,
+              ),
+              `L ${last.x.toFixed(1)} ${(padTop + plotH).toFixed(1)}`,
+              "Z",
+            ].join(" ");
+            trendSvgEl.appendChild(
+              svgEl("path", {
+                d: areaD,
+                fill:
+                  trendSeriesKind === "share"
+                    ? "rgba(15, 118, 110, 0.12)"
+                    : "rgba(36, 70, 102, 0.12)",
+              }),
+            );
+          }
+        }
+
+        const pointsAttr = coords
+          .map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`)
+          .join(" ");
+        trendSvgEl.appendChild(
+          svgEl("polyline", {
+            points: pointsAttr,
+            fill: "none",
+            stroke,
+            "stroke-width": 2.4,
+            "stroke-linejoin": "round",
+            "stroke-linecap": "round",
+          }),
+        );
+
+        const showDots = trendCadence === "annual_same_month";
+        for (const c of coords) {
+          const isPinned =
+            c.pt.ym === (hoveredTrendYm ?? current.ym);
+          if (!showDots && !isPinned) continue;
+          trendSvgEl.appendChild(
+            svgEl("circle", {
+              cx: c.x,
+              cy: c.y,
+              r: isPinned ? 5 : 3.5,
+              fill: isPinned ? "#ffffff" : stroke,
+              stroke,
+              "stroke-width": isPinned ? 2.5 : 1.5,
+            }),
+          );
+        }
+      };
+
+      if (trendSeriesKind === "gender") {
+        drawPolyline(
+          series.map((pt, i) => ({ x: xAt(i), y: yAt(pt.male), pt })),
+          "#244666",
+          false,
+        );
+        drawPolyline(
+          series.map((pt, i) => ({ x: xAt(i), y: yAt(pt.female), pt })),
+          "#cf4f6b",
+          false,
+        );
+      } else if (trendSeriesKind === "total") {
+        drawPolyline(
+          series.map((pt, i) => ({ x: xAt(i), y: yAt(pt.total), pt })),
+          "#244666",
+          true,
+        );
+      } else {
+        drawPolyline(
+          series.map((pt, i) => ({ x: xAt(i), y: yAt(pt.sharePct), pt })),
+          "#0f766e",
+          true,
+        );
+      }
+
+      // Interactive vertical hit columns
+      const hitSliceW = plotW / Math.max(1, series.length);
+      for (let i = 0; i < series.length; i++) {
+        const pt = series[i];
+        if (!pt) continue;
+        const cx = xAt(i);
+        const hitRect = svgEl("rect", {
+          x: Math.max(padLeft, cx - hitSliceW / 2),
+          y: padTop,
+          width: hitSliceW,
+          height: plotH,
+          fill: "transparent",
+          class: "cursor-pointer",
+        });
+
+        hitRect.addEventListener("mouseenter", () => {
+          hoveredTrendYm = pt.ym;
+          renderTrendInspector(pt, spec);
+        });
+        hitRect.addEventListener("click", () => {
+          stopPlayback();
+          const idx = snapshotIndexByYm.get(pt.ym);
+          if (idx !== undefined) {
+            currentIndex = idx;
+            hoveredTrendYm = pt.ym;
+            renderAll();
+          }
+        });
+        trendSvgEl.appendChild(hitRect);
+      }
+
+      const defaultPt =
+        (hoveredTrendYm
+          ? series.find((pt) => pt.ym === hoveredTrendYm)
+          : null) ??
+        series.find((pt) => pt.ym === current.ym) ??
+        series[series.length - 1] ??
+        null;
+      renderTrendInspector(defaultPt, spec);
+    }
+
+    function renderThreeTierComposition(current: PopulationSnapshot): void {
+      if (!compositionRowsEl) return;
+      if (compositionMonthLabel) {
+        compositionMonthLabel.textContent = `${current.month}月`;
+      }
+      compositionRowsEl.replaceChildren();
+
+      for (const year of dataset.range.years) {
+        const snap = snapshots.find(
+          (s) => s.year === year && s.month === current.month,
+        );
+        if (!snap) continue;
+        const metrics = computeSnapshotMetrics(snap);
+        const isCurrent = snap.ym === current.ym;
+
+        const rowBtn = htmlEl(
+          "button",
+          `flex w-full flex-col gap-1.5 rounded-xl border px-3.5 py-2.5 text-left transition sm:flex-row sm:items-center sm:gap-4 ${
+            isCurrent
+              ? "border-alps-500 bg-alps-50/80 ring-1 ring-alps-200"
+              : "border-slate-200 bg-white hover:border-alps-300 hover:bg-slate-50"
+          }`,
+        );
+        rowBtn.type = "button";
+        rowBtn.addEventListener("click", () => {
+          selectYearMonth(snap.year, snap.month);
+        });
+
+        const yearLabel = htmlEl(
+          "div",
+          "flex w-36 shrink-0 items-baseline justify-between gap-2 sm:block",
+        );
+        yearLabel.append(
+          htmlEl(
+            "span",
+            `text-xs font-bold ${isCurrent ? "text-alps-950" : "text-slate-800"}`,
+            `${year}年${snap.month}月`,
+          ),
+          htmlEl(
+            "span",
+            "block font-mono text-[11px] text-slate-500",
+            `${snap.total.toLocaleString("ja-JP")}人`,
+          ),
+        );
+
+        const barTrack = htmlEl(
+          "div",
+          "flex h-6 w-full overflow-hidden rounded-lg bg-slate-100 text-[10px] font-semibold text-white",
+        );
+
+        const youthBar = htmlEl(
+          "div",
+          "flex items-center justify-center bg-emerald-500 transition-all",
+          metrics.youthPct >= 9 ? `${metrics.youthPct.toFixed(1)}%` : "",
+        );
+        youthBar.style.width = `${metrics.youthPct}%`;
+
+        const workingBar = htmlEl(
+          "div",
+          "flex items-center justify-center bg-[#244666] transition-all",
+          `${metrics.workingPct.toFixed(1)}%`,
+        );
+        workingBar.style.width = `${metrics.workingPct}%`;
+
+        const elderlyBar = htmlEl(
+          "div",
+          "flex items-center justify-center bg-amber-500 text-amber-950 transition-all",
+          `${metrics.elderlyPct.toFixed(1)}%`,
+        );
+        elderlyBar.style.width = `${metrics.elderlyPct}%`;
+
+        barTrack.append(youthBar, workingBar, elderlyBar);
+        rowBtn.append(yearLabel, barTrack);
+        compositionRowsEl.appendChild(rowBtn);
+      }
+    }
+
+    function renderAll(): void {
+      const current = getCurrentSnapshot();
+      const compareSnap = resolveComparisonSnapshot(
+        snapshots,
+        current,
+        compareMode,
+      );
+
+      if (pyramidCurrentLabel) {
+        pyramidCurrentLabel.textContent = `${formatYmJa(current.ym)} 1日現在`;
+      }
+      if (monthSelect) {
+        monthSelect.value = String(current.month);
+      }
+      if (timelineSlider) {
+        timelineSlider.value = String(currentIndex);
+      }
+
+      if (pyramidCompareLegend && pyramidCompareNote) {
+        if (compareSnap) {
+          pyramidCompareLegend.classList.remove("hidden");
+          pyramidCompareNote.textContent = `比較枠: ${formatYmJa(compareSnap.ym, false)}`;
+        } else {
+          pyramidCompareLegend.classList.add("hidden");
+        }
+      }
+
+      setButtonGroupState(
+        granularityButtons,
+        "data-granularity-btn",
+        granularity,
+        "rect",
+      );
+      setButtonGroupState(
+        compareButtons,
+        "data-compare-btn",
+        compareMode,
+        "pill",
+      );
+      setButtonGroupState(axisButtons, "data-axis-btn", axisMode, "pill");
+      setButtonGroupState(
+        yearButtons,
+        "data-year-btn",
+        String(current.year),
+        "compact",
+      );
+      setButtonGroupState(
+        playModeButtons,
+        "data-play-mode-btn",
+        playMode,
+        "compact",
+      );
+
+      renderSummaryCards(current, compareSnap);
+      renderPyramid(current, compareSnap);
+      renderPyramidTable(current, compareSnap);
+      renderTrendSection();
+      renderThreeTierComposition(current);
+    }
+
+    // Bind static controls
+    for (const btn of granularityButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-granularity-btn");
+        if (next === "decade" || next === "five_year" || next === "single") {
+          granularity = next;
+          inspectedBandId = null;
+          renderAll();
+        }
+      });
+    }
+
+    for (const btn of compareButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-compare-btn");
+        if (
+          next === "none" ||
+          next === "start_2017" ||
+          next === "five_years_ago" ||
+          next === "prev_year"
+        ) {
+          compareMode = next;
+          renderAll();
+        }
+      });
+    }
+
+    for (const btn of axisButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-axis-btn");
+        if (next === "fixed" || next === "auto") {
+          axisMode = next;
+          renderAll();
+        }
+      });
+    }
+
+    for (const btn of yearButtons) {
+      btn.addEventListener("click", () => {
+        const y = Number.parseInt(btn.getAttribute("data-year-btn") ?? "", 10);
+        if (Number.isFinite(y)) {
+          selectYearMonth(y, getCurrentSnapshot().month);
+        }
+      });
+    }
+
+    monthSelect?.addEventListener("change", () => {
+      const m = Number.parseInt(monthSelect.value, 10);
+      if (Number.isFinite(m)) {
+        selectYearMonth(getCurrentSnapshot().year, m);
+      }
+    });
+
+    timelineSlider?.addEventListener("input", () => {
+      stopPlayback();
+      const idx = Number.parseInt(timelineSlider.value, 10);
+      if (Number.isFinite(idx) && idx >= 0 && idx < snapshots.length) {
+        currentIndex = idx;
+        yearMonthClampNote?.classList.add("hidden");
+        renderAll();
+      }
+    });
+
+    for (const btn of playModeButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-play-mode-btn");
+        if (next === "annual" || next === "monthly") {
+          playMode = next;
+          setButtonGroupState(
+            playModeButtons,
+            "data-play-mode-btn",
+            playMode,
+            "compact",
+          );
+          if (playTimerId !== null) {
+            stopPlayback();
+          }
+        }
+      });
+    }
+
+    playToggleBtn?.addEventListener("click", () => {
+      if (playTimerId !== null) {
+        stopPlayback();
+        return;
+      }
+
+      const getSequenceIndices = (): number[] => {
+        if (playMode === "monthly") {
+          return snapshots.map((_, i) => i);
+        }
+        const targetMonth = getCurrentSnapshot().month;
+        const indices: number[] = [];
+        for (let i = 0; i < snapshots.length; i++) {
+          if (snapshots[i]?.month === targetMonth) {
+            indices.push(i);
+          }
+        }
+        return indices.length > 0 ? indices : snapshots.map((_, i) => i);
+      };
+
+      const seq = getSequenceIndices();
+      let pos = seq.indexOf(currentIndex);
+      if (pos === -1 || pos >= seq.length - 1) {
+        pos = 0;
+        currentIndex = seq[0] ?? 0;
+        renderAll();
+      }
+
+      playToggleBtn.setAttribute("aria-pressed", "true");
+      playToggleBtn.textContent = "⏸ 停止";
+      yearMonthClampNote?.classList.add("hidden");
+
+      const intervalMs = playMode === "annual" ? 750 : 180;
+      playTimerId = window.setInterval(() => {
+        pos += 1;
+        const nextIdx = seq[pos];
+        if (nextIdx === undefined) {
+          stopPlayback();
+          return;
+        }
+        currentIndex = nextIdx;
+        renderAll();
+        if (pos >= seq.length - 1) {
+          stopPlayback();
+        }
+      }, intervalMs);
+    });
+
+    for (const btn of trendModeButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-trend-mode-btn");
+        if (next === "decade" || next === "three_tier") {
+          trendMode = next;
+          hoveredTrendYm = null;
+          renderTrendSection();
+        }
+      });
+    }
+
+    for (const btn of cadenceButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-cadence-btn");
+        if (next === "annual_same_month" || next === "monthly") {
+          trendCadence = next;
+          hoveredTrendYm = null;
+          renderTrendSection();
+        }
+      });
+    }
+
+    for (const btn of seriesButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.getAttribute("data-series-btn");
+        if (next === "gender" || next === "total" || next === "share") {
+          trendSeriesKind = next;
+          renderTrendSection();
+        }
+      });
+    }
+
+    renderAll();
+  </script>
+</BaseLayout>
