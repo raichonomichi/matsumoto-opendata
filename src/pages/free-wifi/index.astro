@@ -1,0 +1,1366 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  type AccessPolicy,
+  freeWifiDatasetSchema,
+  type IndoorOutdoor,
+  type PowerAvailability,
+  type WifiAreaGroup,
+  type WifiPurpose,
+  type WifiSpot,
+} from "@/lib/free-wifi-schema";
+
+const rawJson = readFileSync(path.resolve("src/data/free-wifi.json"), "utf-8");
+const dataset = freeWifiDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = [
+  "matsumoto-public-wifi",
+  "matsumoto-public-facilities",
+  "cao-national-holidays",
+];
+
+type TabKey = WifiPurpose | "all";
+
+const studyWorkCount = dataset.spots.filter((s) =>
+  s.purposes.includes("study_work"),
+).length;
+const sightseeingCount = dataset.spots.filter((s) =>
+  s.purposes.includes("sightseeing"),
+).length;
+const meetingRentalCount = dataset.spots.filter((s) =>
+  s.purposes.includes("meeting_rental"),
+).length;
+
+const districts = Array.from(
+  new Set(dataset.spots.map((s) => s.district)),
+).sort((a, b) => a.localeCompare(b, "ja"));
+
+const ssidOptions = [
+  { value: "all", label: "すべて" },
+  {
+    value: "Matsumoto_Community_Free_WiFi",
+    label: "Matsumoto_Community_Free_WiFi（公民館・文化施設等）",
+  },
+  { value: "MLib-wifi", label: "MLib-wifi（市立図書館）" },
+  {
+    value: "Matsumoto_City_Free_Wi-Fi",
+    label: "Matsumoto_City_Free_Wi-Fi（観光・山岳）",
+  },
+  { value: "Matsumoto Free Wi-Fi", label: "Matsumoto Free Wi-Fi（市役所）" },
+  { value: "none", label: "未記載（文化ホール・博物館等）" },
+] as const;
+
+const tabs: {
+  id: TabKey;
+  label: string;
+  count: number;
+  guide: string;
+}[] = [
+  {
+    id: "study_work",
+    label: "PC作業・勉強",
+    count: studyWorkCount,
+    guide:
+      "図書館全11館とフリースペース・学習室がある主要拠点を優先表示しています。一般閲覧席では原則電源提供がない図書館も多いため、電源バッジもあわせてご確認ください。",
+  },
+  {
+    id: "sightseeing",
+    label: "観光・立ち寄り",
+    count: sightseeingCount,
+    guide:
+      "松本駅前・松本城周辺・温泉地・上高地・乗鞍・美ヶ原など、外出先や山岳エリアで立ち寄り接続しやすい観光向けWi-Fiスポットを表示しています。",
+  },
+  {
+    id: "meeting_rental",
+    label: "会議・イベント（貸館）",
+    count: meetingRentalCount,
+    guide:
+      "地区公民館・文化センター・勤労者福祉センターなど会議や講座で使える施設を表示しています。多くの貸館は事前予約制のため、電話番号や公式案内からご確認ください。",
+  },
+  {
+    id: "all",
+    label: "すべて（庁舎・体育館等含む）",
+    count: dataset.count,
+    guide:
+      "体育館・保健センター・支所・市役所庁舎も含む全85スポットを横断表示します。災害時の避難・情報確認拠点の下調べにも使えます。",
+  },
+];
+
+const areaButtons: { id: "all" | WifiAreaGroup; label: string }[] = [
+  { id: "all", label: "すべて" },
+  { id: "central", label: "松本駅・中心市街地" },
+  { id: "suburbs", label: "郊外・住宅エリア" },
+  { id: "onsen", label: "温泉エリア" },
+  { id: "mountains", label: "上高地・乗鞍・美ヶ原" },
+];
+
+const areaLabels: Record<WifiAreaGroup, string> = {
+  central: "中心市街地",
+  suburbs: "郊外・住宅",
+  onsen: "温泉エリア",
+  mountains: "上高地・乗鞍・美ヶ原",
+};
+
+const accessPolicyLabels: Record<AccessPolicy, string> = {
+  drop_in: "予約不要",
+  outdoor_open: "屋外立ち寄り",
+  facility_visitor: "来館者向け",
+  reservation_required: "原則貸館・要予約",
+  check_official: "利用条件要確認",
+};
+
+const accessPolicyBadgeClasses: Record<AccessPolicy, string> = {
+  drop_in: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  outdoor_open: "bg-sky-50 text-sky-800 ring-sky-200",
+  facility_visitor: "bg-slate-100 text-slate-700 ring-slate-200",
+  reservation_required: "bg-amber-50 text-amber-800 ring-amber-200",
+  check_official: "bg-slate-100 text-slate-600 ring-slate-200",
+};
+
+const powerLabels: Record<PowerAvailability, string> = {
+  available: "電源あり",
+  limited_seats: "電源席あり（一部）",
+  none: "原則電源なし",
+  unknown: "電源未記載",
+};
+
+const powerBadgeClasses: Record<PowerAvailability, string> = {
+  available: "bg-alps-50 text-alps-800 ring-alps-200",
+  limited_seats: "bg-indigo-50 text-indigo-800 ring-indigo-200",
+  none: "bg-slate-50 text-slate-500 ring-slate-200",
+  unknown: "bg-slate-50 text-slate-500 ring-slate-200",
+};
+
+const indoorOutdoorLabels: Record<IndoorOutdoor, string> = {
+  indoor: "屋内",
+  outdoor: "屋外",
+  both: "屋内・屋外",
+};
+
+const useCases = [
+  {
+    title: "今すぐPC作業・勉強できる場所を探したい時",
+    description:
+      "図書館全11館やMウイング・なんなんひろばを、今開館中（目安）・予約不要・19時以降・月曜/土日開館・電源席情報でまとめて比較できます。",
+  },
+  {
+    title: "観光や上高地・乗鞍など山岳エリアで繋ぎたい時",
+    description:
+      "松本駅前・松本城・温泉地・上高地・乗鞍・美ヶ原の観光向けWi-Fiをエリア別に整理。外出先から現在地に近い順やGoogleマップで迷わず向かえます。",
+  },
+  {
+    title: "会議・講座の会場選定や災害時の備えに",
+    description:
+      "地区公民館や文化ホールのAP数（規模目安）・開館時間・連絡先を横断比較でき、災害時の無料開放拠点の平時確認にも役立ちます。",
+  },
+] as const;
+
+function buildSearchText(spot: WifiSpot): string {
+  return [
+    spot.name,
+    spot.facilityName,
+    spot.category,
+    spot.address,
+    spot.district,
+    areaLabels[spot.areaGroup],
+    spot.ssid ?? "",
+    spot.studyWorkNote ?? "",
+    spot.powerNote ?? "",
+    spot.complexNote ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getSsrInitialStatusLabel(spot: WifiSpot): {
+  label: string;
+  badgeClass: string;
+} {
+  if (spot.schedule.kind === "outdoor_24h") {
+    return {
+      label: "屋外・終日目安",
+      badgeClass: "bg-sky-50 text-sky-800 ring-sky-200",
+    };
+  }
+  if (spot.schedule.kind === "check_official") {
+    return {
+      label: "開館時間要確認",
+      badgeClass: "bg-amber-50 text-amber-800 ring-amber-200",
+    };
+  }
+  return {
+    label: "開館目安あり",
+    badgeClass: "bg-slate-100 text-slate-700 ring-slate-200",
+  };
+}
+
+const embeddedPayload = {
+  holidays: dataset.holidays,
+  tabGuides: Object.fromEntries(tabs.map((t) => [t.id, t.guide])),
+  spots: dataset.spots.map((s) => ({
+    id: s.id,
+    purposes: s.purposes,
+    areaGroup: s.areaGroup,
+    district: s.district,
+    ssid: s.ssid,
+    accessPolicy: s.accessPolicy,
+    powerAvailability: s.powerAvailability,
+    openLate: s.openLate,
+    openMonday: s.openMonday,
+    openWeekend: s.openWeekend,
+    apCount: s.apCount,
+    recommendedRank: s.recommendedRank,
+    latestCloseMinutes: s.latestCloseMinutes,
+    lat: s.lat,
+    lng: s.lng,
+    schedule: s.schedule,
+    searchText: buildSearchText(s),
+  })),
+};
+const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
+---
+
+<BaseLayout
+  title="松本フリーWi-Fi 目的別ファインダー"
+  description="PC作業・勉強、観光・山岳エリアでの立ち寄り、会議・貸館まで。松本市の公衆無線LANと公共施設・祝日データを掛け合わせ、目的・エリア・今開館中（目安）・現在地からの距離で探せます。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-9 text-white sm:px-9 sm:py-11">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-alps-200 ring-1 ring-white/15">
+          松本市 公衆無線LAN × 公共施設・祝日データ
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          データ更新日: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        松本フリーWi-Fi 目的別ファインダー
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        「今すぐ座ってPC作業や勉強がしたい」「観光や上高地・乗鞍でWi-Fiに繋ぎたい」「会議で使える公民館を探したい」——松本市の公衆無線LAN一覧と公共施設の開館時間・祝日データを結合し、目的に合ったスポットを今開館中かどうか（目安）や現在地からの距離で絞り込めます。
+      </p>
+
+      <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">収録Wi-Fiスポット</p>
+          <p class="mt-0.5 text-xl font-bold">{dataset.count} 箇所</p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            公式CSV 84件＋あがたの森図書館補完
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">PC作業・勉強向け</p>
+          <p class="mt-0.5 text-xl font-bold">{studyWorkCount} 施設</p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            市立図書館全11館＋フリースペース等
+          </p>
+        </div>
+        <div class="col-span-2 rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15 sm:col-span-1">
+          <p class="text-[11px] text-alps-200">対象エリア・地域区分</p>
+          <p class="mt-0.5 text-xl font-bold">
+            4 エリア / {districts.length} 地区
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            市街地・郊外・温泉・山岳を網羅
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section aria-labelledby="use-cases-heading" class="space-y-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="use-cases-heading"
+          class="text-base font-bold text-slate-900 sm:text-lg"
+        >
+          こんな時に使えます
+        </h2>
+        <p class="text-xs text-slate-500">
+          仕事・自習の拠点探し／観光・登山の通信確保／貸館・防災の確認向け
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {useCases.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-bold text-alps-950">{item.title}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Notice -->
+    <aside
+      aria-label="ご利用上の注意と公式案内"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        開館判定・電源・休館日のご確認について
+      </p>
+      <p class="mt-1 text-amber-900/90">{dataset.notice}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={dataset.officialLinks.libraryTop}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-800"
+        >
+          松本市図書館 公式案内 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.chuoLibraryRenovation}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          中央図書館 大規模改修休館予定 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.communityWifi}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          コミュニティWiFi案内 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.cityWifi}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          観光Wi-Fi案内 ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Purpose Tabs + Filter Panel -->
+    <section
+      aria-label="目的別シーン切替と絞り込み"
+      class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-6"
+    >
+      <!-- 4 Purpose Tabs -->
+      <div>
+        <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          1. 利用目的（シーン）を選ぶ
+        </p>
+        <div
+          role="tablist"
+          aria-label="利用目的タブ"
+          class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {tabs.map((tab) => {
+            const isInitial = tab.id === "study_work";
+            return (
+              <button
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                data-tab-btn={tab.id}
+                aria-selected={isInitial ? "true" : "false"}
+                aria-controls="spot-list-section"
+                class:list={[
+                  "flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-left text-xs font-semibold transition sm:text-sm",
+                  isInitial
+                    ? "border-alps-900 bg-alps-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-800 hover:border-alps-400 hover:bg-alps-50/60",
+                ]}
+              >
+                <span>{tab.label}</span>
+                <span
+                  data-tab-badge
+                  class:list={[
+                    "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                    isInitial
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-700",
+                  ]}
+                >
+                  {tab.count}件
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p
+          id="tab-guide"
+          class="mt-3 rounded-xl border border-alps-200/80 bg-white px-4 py-2.5 text-xs leading-relaxed text-slate-700"
+        >
+          {tabs[0].guide}
+        </p>
+      </div>
+
+      <!-- Quick Condition Chips -->
+      <div class="border-t border-slate-200/80 pt-4">
+        <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          2. 条件で絞り込む（複数選択可）
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            data-quick-btn="open-now"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            今開館中（目安）
+          </button>
+          <button
+            type="button"
+            data-quick-btn="drop-in"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            予約不要
+          </button>
+          <button
+            type="button"
+            data-quick-btn="open-late"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            夜19時以降OK
+          </button>
+          <button
+            type="button"
+            data-quick-btn="open-monday"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            月曜OK
+          </button>
+          <button
+            type="button"
+            data-quick-btn="open-weekend"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            土日祝OK
+          </button>
+          <button
+            type="button"
+            data-quick-btn="has-power"
+            aria-pressed="false"
+            class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            電源情報あり
+          </button>
+        </div>
+      </div>
+
+      <!-- Area Buttons -->
+      <div class="border-t border-slate-200/80 pt-4">
+        <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          3. エリアを選ぶ
+        </p>
+        <div class="flex flex-wrap gap-2">
+          {areaButtons.map((area) => {
+            const isSelected = area.id === "all";
+            return (
+              <button
+                type="button"
+                data-area-btn={area.id}
+                aria-pressed={isSelected ? "true" : "false"}
+                class:list={[
+                  "rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
+                  isSelected
+                    ? "bg-alps-900 text-white"
+                    : "border border-slate-300 bg-white text-slate-700 hover:border-alps-400 hover:text-alps-900",
+                ]}
+              >
+                {area.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- Detailed Filters & Sort -->
+      <div class="grid gap-3 border-t border-slate-200/80 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label
+            for="filter-district"
+            class="block text-xs font-medium text-slate-700"
+          >
+            地域区分
+          </label>
+          <select
+            id="filter-district"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-600 focus:outline-none"
+          >
+            <option value="all">すべての地域区分</option>
+            {districts.map((district) => (
+              <option value={district}>{district}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            for="filter-ssid"
+            class="block text-xs font-medium text-slate-700"
+          >
+            SSID（Wi-Fi系統）
+          </label>
+          <select
+            id="filter-ssid"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-600 focus:outline-none"
+          >
+            {ssidOptions.map((opt) => (
+              <option value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
+            for="filter-keyword"
+            class="block text-xs font-medium text-slate-700"
+          >
+            キーワード検索
+          </label>
+          <input
+            id="filter-keyword"
+            type="search"
+            placeholder="施設名・住所・駅・電源など"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-alps-600 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label
+            for="sort-order"
+            class="block text-xs font-medium text-slate-700"
+          >
+            並び替え
+          </label>
+          <select
+            id="sort-order"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-600 focus:outline-none"
+          >
+            <option value="recommended">おすすめ順</option>
+            <option value="distance">現在地から近い順</option>
+            <option value="ap-desc">AP数が多い順</option>
+            <option value="close-desc">閉館時間が遅い順</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Geolocation & Result Status Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-4">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            id="btn-geolocation"
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-alps-300 bg-white px-3.5 py-2 text-xs font-semibold text-alps-900 transition hover:border-alps-500 hover:bg-alps-50"
+          >
+            <span aria-hidden="true">📍</span>
+            <span>現在地から近い順に並べる</span>
+          </button>
+          <p class="text-[11px] text-slate-500">
+            ※位置情報はブラウザ内の距離計算のみに使用し、外部送信しません
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <p
+            id="jst-clock"
+            class="font-mono text-[11px] text-slate-500"
+          ></p>
+          <p class="text-xs font-semibold text-slate-700">
+            <span id="visible-count">{studyWorkCount}</span> / {dataset.count} 件表示中
+          </p>
+          <button
+            id="filter-reset"
+            type="button"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+          >
+            条件リセット
+          </button>
+        </div>
+      </div>
+
+      <p
+        id="geo-status"
+        role="status"
+        aria-live="polite"
+        class="hidden rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-700"
+      ></p>
+    </section>
+
+    <!-- Spot Card Grid -->
+    <section id="spot-list-section" aria-label="スポット一覧" class="space-y-4">
+      <div id="spot-list" class="grid gap-4 md:grid-cols-2">
+        {dataset.spots.map((spot) => {
+          const isInitialVisible = spot.purposes.includes("study_work");
+          const ssrStatus = getSsrInitialStatusLabel(spot);
+          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`;
+          return (
+            <article
+              data-spot-card
+              data-spot-id={spot.id}
+              class:list={[
+                "flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-alps-300 hover:shadow-sm",
+                !isInitialVisible && "hidden",
+              ]}
+            >
+              <div>
+                <!-- Status & Attribute Badges -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span
+                    data-status-badge
+                    class:list={[
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1",
+                      ssrStatus.badgeClass,
+                    ]}
+                  >
+                    {ssrStatus.label}
+                  </span>
+
+                  <span
+                    data-distance-badge
+                    class="hidden rounded-full bg-alps-900 px-2.5 py-0.5 text-[11px] font-semibold text-white"
+                  />
+
+                  <span
+                    class:list={[
+                      "rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1",
+                      accessPolicyBadgeClasses[spot.accessPolicy],
+                    ]}
+                  >
+                    {accessPolicyLabels[spot.accessPolicy]}
+                  </span>
+
+                  {(spot.powerAvailability === "available" ||
+                    spot.powerAvailability === "limited_seats") && (
+                    <span
+                      class:list={[
+                        "rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1",
+                        powerBadgeClasses[spot.powerAvailability],
+                      ]}
+                    >
+                      {powerLabels[spot.powerAvailability]}
+                    </span>
+                  )}
+
+                  {spot.openLate && spot.schedule.kind === "structured" && (
+                    <span class="rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 ring-1 ring-violet-200">
+                      夜19時以降OK
+                    </span>
+                  )}
+
+                  <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
+                    {indoorOutdoorLabels[spot.indoorOutdoor]}
+                  </span>
+                </div>
+
+                <!-- Facility Name & Location -->
+                <h3 class="mt-3 text-base font-bold leading-snug text-slate-900 sm:text-lg">
+                  {spot.name}
+                </h3>
+                <p class="mt-1 text-xs text-slate-500">
+                  {spot.category} / {areaLabels[spot.areaGroup]}（{spot.district}地区）
+                </p>
+                <p class="mt-1 text-xs text-slate-600">{spot.address}</p>
+
+                <!-- SSID & AP Bar -->
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="min-w-0">
+                    <span class="block text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+                      SSID
+                    </span>
+                    <span class="block truncate font-mono text-xs font-semibold text-slate-900">
+                      {spot.ssid ?? "未記載（現地案内を確認）"}
+                    </span>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-2">
+                    <span class="rounded-md bg-white px-2 py-0.5 font-mono text-[11px] font-medium text-slate-700 ring-1 ring-slate-200">
+                      AP: {spot.apCount}台
+                    </span>
+                    {spot.ssid && (
+                      <button
+                        type="button"
+                        data-copy-ssid={spot.ssid}
+                        class="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-alps-500 hover:text-alps-900"
+                      >
+                        SSIDコピー
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <!-- Details -->
+                <dl class="mt-3 space-y-2 text-xs leading-relaxed text-slate-700">
+                  <div>
+                    <dt class="font-semibold text-slate-500">開館・利用時間</dt>
+                    <dd class="mt-0.5 font-medium text-slate-900">
+                      {spot.schedule.summaryText}
+                      <span
+                        data-today-hours
+                        class="ml-1.5 text-[11px] font-normal text-alps-800"
+                      />
+                    </dd>
+                    <dd
+                      data-status-reason
+                      class="hidden mt-0.5 text-[11px] text-slate-500"
+                    />
+                  </div>
+
+                  {(spot.schedule.holidayNote ||
+                    (spot.schedule.kind === "structured" &&
+                      spot.schedule.variableClosingNote)) && (
+                    <div>
+                      <dt class="font-semibold text-slate-500">休館日・注記</dt>
+                      <dd class="mt-0.5 text-slate-600">
+                        {[
+                          spot.schedule.holidayNote,
+                          spot.schedule.kind === "structured"
+                            ? spot.schedule.variableClosingNote
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ")}
+                      </dd>
+                    </div>
+                  )}
+
+                  {(spot.powerNote || spot.studyWorkNote) && (
+                    <div>
+                      <dt class="font-semibold text-slate-500">
+                        作業環境・電源・利用メモ
+                      </dt>
+                      <dd class="mt-0.5 text-slate-700">
+                        {[spot.powerNote, spot.studyWorkNote]
+                          .filter(Boolean)
+                          .join(" ")}
+                      </dd>
+                    </div>
+                  )}
+
+                  {spot.complexNote && (
+                    <div class="rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-600">
+                      {spot.complexNote}
+                    </div>
+                  )}
+
+                  {spot.phone && (
+                    <div>
+                      <dt class="inline font-semibold text-slate-500">電話: </dt>
+                      <dd class="inline">
+                        <a
+                          href={`tel:${spot.phone.replace(/[^0-9+]/g, "")}`}
+                          class="font-medium text-alps-800 underline decoration-alps-300 underline-offset-2 hover:text-alps-950"
+                        >
+                          {spot.phone}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+
+              <!-- Footer Actions -->
+              <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center rounded-lg bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-alps-800"
+                >
+                  Googleマップで開く ↗
+                </a>
+                {spot.officialUrl && (
+                  <a
+                    href={spot.officialUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-950"
+                  >
+                    公式案内を見る ↗
+                  </a>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <!-- Empty State -->
+      <div
+        id="empty-state"
+        class="hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"
+      >
+        <p class="text-sm font-semibold text-slate-800">
+          指定した条件に一致するWi-Fiスポットが見つかりませんでした
+        </p>
+        <p class="mt-1 text-xs text-slate-600">
+          タブを「すべて」に切り替えるか、検索条件をリセットしてお試しください。
+        </p>
+        <button
+          id="empty-reset"
+          type="button"
+          class="mt-4 rounded-xl bg-alps-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-alps-800"
+        >
+          条件をリセットする
+        </button>
+      </div>
+    </section>
+
+    <!-- SSID Guides & Disaster Info -->
+    <section aria-labelledby="ssid-guide-heading" class="space-y-4">
+      <div>
+        <h2
+          id="ssid-guide-heading"
+          class="text-lg font-bold text-slate-900 sm:text-xl"
+        >
+          SSID別 つなぎ方・利用ルール＆災害時の開放について
+        </h2>
+        <p class="mt-1 text-xs text-slate-600">
+          松本市の公衆無線LANは施設の種類によってSSIDと認証方法が異なります。現地で接続する際の目安としてご確認ください。
+        </p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        {dataset.ssidGuides.map((guide) => (
+          <article class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5">
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-bold text-alps-950">{guide.title}</h3>
+                <span class="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-800">
+                  {guide.ssidLabel}
+                </span>
+              </div>
+              <dl class="mt-3 space-y-1.5 text-xs text-slate-700">
+                <div>
+                  <dt class="inline font-semibold text-slate-500">認証方法: </dt>
+                  <dd class="inline">{guide.authMethod}</dd>
+                </div>
+                <div>
+                  <dt class="inline font-semibold text-slate-500">利用時間: </dt>
+                  <dd class="inline">{guide.timeLimit}</dd>
+                </div>
+                <div>
+                  <dt class="inline font-semibold text-slate-500">主な場所: </dt>
+                  <dd class="inline">{guide.targetSummary}</dd>
+                </div>
+              </dl>
+              <p class="mt-2.5 text-xs leading-relaxed text-slate-600">
+                {guide.notes}
+              </p>
+            </div>
+            <div class="mt-4 border-t border-slate-100 pt-3">
+              <a
+                href={guide.officialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-xs font-semibold text-alps-800 underline underline-offset-2 hover:text-alps-950"
+              >
+                公式接続案内ページを見る ↗
+              </a>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div class="rounded-2xl border border-sky-200 bg-sky-50/70 px-5 py-4 text-xs leading-relaxed text-sky-950">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="font-bold text-sky-900">
+              災害発生時の公衆無線LAN開放について
+            </p>
+            <p class="mt-1 text-sky-900/90">
+              松本市では大規模災害発生時などに、公衆無線LANを事前登録・認証なしで開放する運用があります。詳細な運用基準・対象エリアは公式ページをご確認ください。
+            </p>
+          </div>
+          <a
+            href={dataset.officialLinks.disasterWifi}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex shrink-0 items-center rounded-lg bg-sky-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-800"
+          >
+            災害時Wi-Fi運用を確認 ↗
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script
+    id="free-wifi-data"
+    type="application/json"
+    set:html={embeddedJson}
+  />
+
+  <script>
+    import {
+      evaluateOpenStatus,
+      getJstDateParts,
+      haversineDistanceKm,
+      type OpenEvaluation,
+    } from "@/lib/free-wifi-schedule";
+    import type {
+      AccessPolicy,
+      FacilitySchedule,
+      PowerAvailability,
+      WifiAreaGroup,
+      WifiPurpose,
+    } from "@/lib/free-wifi-schema";
+
+    interface ClientSpot {
+      id: string;
+      purposes: WifiPurpose[];
+      areaGroup: WifiAreaGroup;
+      district: string;
+      ssid: string | null;
+      accessPolicy: AccessPolicy;
+      powerAvailability: PowerAvailability;
+      openLate: boolean;
+      openMonday: boolean;
+      openWeekend: boolean;
+      apCount: number;
+      recommendedRank: number;
+      latestCloseMinutes: number | null;
+      lat: number;
+      lng: number;
+      schedule: FacilitySchedule;
+      searchText: string;
+    }
+
+    interface EmbeddedPayload {
+      holidays: Record<string, string>;
+      tabGuides: Record<string, string>;
+      spots: ClientSpot[];
+    }
+
+    const dataEl = document.getElementById("free-wifi-data");
+    const payload: EmbeddedPayload = dataEl?.textContent
+      ? JSON.parse(dataEl.textContent)
+      : { holidays: {}, tabGuides: {}, spots: [] };
+
+    const spotById = new Map(payload.spots.map((s) => [s.id, s]));
+
+    const listEl = document.getElementById("spot-list");
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-spot-card]"),
+    );
+    const tabButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-tab-btn]"),
+    );
+    const quickButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-quick-btn]"),
+    );
+    const areaButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-area-btn]"),
+    );
+    const tabGuideEl = document.getElementById("tab-guide");
+    const districtSelect = document.getElementById(
+      "filter-district",
+    ) as HTMLSelectElement | null;
+    const ssidSelect = document.getElementById(
+      "filter-ssid",
+    ) as HTMLSelectElement | null;
+    const keywordInput = document.getElementById(
+      "filter-keyword",
+    ) as HTMLInputElement | null;
+    const sortSelect = document.getElementById(
+      "sort-order",
+    ) as HTMLSelectElement | null;
+    const geoButton = document.getElementById(
+      "btn-geolocation",
+    ) as HTMLButtonElement | null;
+    const geoStatusEl = document.getElementById("geo-status");
+    const jstClockEl = document.getElementById("jst-clock");
+    const visibleCountEl = document.getElementById("visible-count");
+    const emptyStateEl = document.getElementById("empty-state");
+    const resetButton = document.getElementById("filter-reset");
+    const emptyResetButton = document.getElementById("empty-reset");
+
+    let activeTab: WifiPurpose | "all" = "study_work";
+    let selectedArea: "all" | WifiAreaGroup = "all";
+    const activeQuickFilters = new Set<string>();
+    let userLocation: { lat: number; lng: number } | null = null;
+    const distanceMap = new Map<string, number>();
+    let openEvaluations = new Map<string, OpenEvaluation>();
+
+    const STATUS_BADGE_CLASSES: Record<OpenEvaluation["status"], string> = {
+      open: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+      closed: "bg-slate-100 text-slate-600 ring-slate-200",
+      outdoor: "bg-sky-50 text-sky-800 ring-sky-200",
+      unknown: "bg-amber-50 text-amber-800 ring-amber-200",
+    };
+
+    const WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"];
+
+    function refreshOpenStatuses(): void {
+      const now = new Date();
+      const jst = getJstDateParts(now);
+      if (jstClockEl) {
+        const hh = String(Math.floor(jst.minutesOfDay / 60)).padStart(2, "0");
+        const mm = String(jst.minutesOfDay % 60).padStart(2, "0");
+        jstClockEl.textContent = `判定基準: ${jst.year}/${String(jst.month).padStart(2, "0")}/${String(jst.day).padStart(2, "0")}(${WEEKDAY_JA[jst.weekday]}) ${hh}:${mm} JST`;
+      }
+
+      const nextMap = new Map<string, OpenEvaluation>();
+      for (const spot of payload.spots) {
+        nextMap.set(spot.id, evaluateOpenStatus(spot.schedule, now, payload.holidays));
+      }
+      openEvaluations = nextMap;
+
+      for (const card of cards) {
+        const id = card.dataset.spotId ?? "";
+        const evalResult = openEvaluations.get(id);
+        if (!evalResult) continue;
+
+        const badge = card.querySelector<HTMLElement>("[data-status-badge]");
+        if (badge) {
+          badge.textContent = evalResult.label;
+          badge.className = `inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_BADGE_CLASSES[evalResult.status]}`;
+        }
+
+        const hoursEl = card.querySelector<HTMLElement>("[data-today-hours]");
+        if (hoursEl) {
+          hoursEl.textContent = evalResult.todayHoursText
+            ? `（本日の目安: ${evalResult.todayHoursText}）`
+            : "";
+        }
+
+        const reasonEl = card.querySelector<HTMLElement>("[data-status-reason]");
+        if (reasonEl) {
+          if (evalResult.status === "closed" && evalResult.reason) {
+            reasonEl.textContent = `判定理由: ${evalResult.reason}`;
+            reasonEl.classList.remove("hidden");
+          } else {
+            reasonEl.textContent = "";
+            reasonEl.classList.add("hidden");
+          }
+        }
+      }
+    }
+
+    function updateTabButtons(): void {
+      for (const btn of tabButtons) {
+        const isSelected = btn.dataset.tabBtn === activeTab;
+        btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "flex items-center justify-between gap-2 rounded-xl border border-alps-900 bg-alps-900 px-3.5 py-2.5 text-left text-xs font-semibold text-white shadow-sm transition sm:text-sm"
+          : "flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-xs font-semibold text-slate-800 transition hover:border-alps-400 hover:bg-alps-50/60 sm:text-sm";
+        const badge = btn.querySelector<HTMLElement>("[data-tab-badge]");
+        if (badge) {
+          badge.className = isSelected
+            ? "rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white"
+            : "rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700";
+        }
+      }
+      if (tabGuideEl && payload.tabGuides[activeTab]) {
+        tabGuideEl.textContent = payload.tabGuides[activeTab];
+      }
+    }
+
+    function updateQuickButtons(): void {
+      for (const btn of quickButtons) {
+        const key = btn.dataset.quickBtn ?? "";
+        const isPressed = activeQuickFilters.has(key);
+        btn.setAttribute("aria-pressed", isPressed ? "true" : "false");
+        btn.className = isPressed
+          ? "rounded-full border border-alps-900 bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function updateAreaButtons(): void {
+      for (const btn of areaButtons) {
+        const isSelected = btn.dataset.areaBtn === selectedArea;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-full bg-alps-900 px-3.5 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function showGeoStatus(message: string, tone: "info" | "error" | "ok"): void {
+      if (!geoStatusEl) return;
+      geoStatusEl.textContent = message;
+      geoStatusEl.className =
+        tone === "error"
+          ? "rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs text-amber-900"
+          : tone === "ok"
+            ? "rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs text-emerald-900"
+            : "rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-700";
+      geoStatusEl.classList.remove("hidden");
+    }
+
+    function requestGeolocationAndSort(): void {
+      if (!navigator.geolocation) {
+        showGeoStatus(
+          "お使いのブラウザは現在地取得（Geolocation API）に対応していません。エリアや地域区分で絞り込んでご利用ください。",
+          "error",
+        );
+        return;
+      }
+
+      if (geoButton) {
+        geoButton.disabled = true;
+      }
+      showGeoStatus("現在地を取得しています…", "info");
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          };
+          distanceMap.clear();
+          for (const spot of payload.spots) {
+            const km = haversineDistanceKm(
+              userLocation.lat,
+              userLocation.lng,
+              spot.lat,
+              spot.lng,
+            );
+            distanceMap.set(spot.id, km);
+          }
+
+          for (const card of cards) {
+            const id = card.dataset.spotId ?? "";
+            const km = distanceMap.get(id);
+            const distBadge = card.querySelector<HTMLElement>(
+              "[data-distance-badge]",
+            );
+            if (distBadge && km !== undefined) {
+              distBadge.textContent =
+                km < 1
+                  ? `現在地から 約${Math.round(km * 1000)}m`
+                  : `現在地から 約${km.toFixed(1)}km`;
+              distBadge.classList.remove("hidden");
+            }
+          }
+
+          if (sortSelect) {
+            sortSelect.value = "distance";
+          }
+          if (geoButton) {
+            geoButton.disabled = false;
+          }
+          showGeoStatus(
+            "現在地からの直線距離を計算し、近い順に並べ替えました（位置情報はブラウザ内のみで利用しています）。",
+            "ok",
+          );
+          applyFilterAndSort();
+        },
+        (err) => {
+          if (geoButton) {
+            geoButton.disabled = false;
+          }
+          if (sortSelect && sortSelect.value === "distance" && !userLocation) {
+            sortSelect.value = "recommended";
+          }
+          const detail =
+            err.code === err.PERMISSION_DENIED
+              ? "位置情報の利用が許可されませんでした。"
+              : "現在地を取得できませんでした。";
+          showGeoStatus(
+            `${detail}エリアボタンや地域区分セレクトから場所をお選びください。`,
+            "error",
+          );
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+
+    function matchesQuickFilters(spot: ClientSpot): boolean {
+      if (activeQuickFilters.has("open-now")) {
+        const ev = openEvaluations.get(spot.id);
+        if (!ev || (ev.status !== "open" && ev.status !== "outdoor")) {
+          return false;
+        }
+      }
+      if (
+        activeQuickFilters.has("drop-in") &&
+        spot.accessPolicy !== "drop_in" &&
+        spot.accessPolicy !== "outdoor_open"
+      ) {
+        return false;
+      }
+      if (activeQuickFilters.has("open-late") && !spot.openLate) {
+        return false;
+      }
+      if (activeQuickFilters.has("open-monday") && !spot.openMonday) {
+        return false;
+      }
+      if (activeQuickFilters.has("open-weekend") && !spot.openWeekend) {
+        return false;
+      }
+      if (
+        activeQuickFilters.has("has-power") &&
+        spot.powerAvailability !== "available" &&
+        spot.powerAvailability !== "limited_seats"
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    function applyFilterAndSort(): void {
+      const district = districtSelect?.value ?? "all";
+      const ssid = ssidSelect?.value ?? "all";
+      const keyword = (keywordInput?.value ?? "").trim().toLowerCase();
+      const sortBy = sortSelect?.value ?? "recommended";
+
+      const sortedCards = [...cards].sort((a, b) => {
+        const spotA = spotById.get(a.dataset.spotId ?? "");
+        const spotB = spotById.get(b.dataset.spotId ?? "");
+        if (!spotA || !spotB) return 0;
+
+        if (sortBy === "distance" && userLocation) {
+          const dA = distanceMap.get(spotA.id) ?? Number.MAX_SAFE_INTEGER;
+          const dB = distanceMap.get(spotB.id) ?? Number.MAX_SAFE_INTEGER;
+          if (dA !== dB) return dA - dB;
+        } else if (sortBy === "ap-desc") {
+          if (spotB.apCount !== spotA.apCount) {
+            return spotB.apCount - spotA.apCount;
+          }
+        } else if (sortBy === "close-desc") {
+          const cA = spotA.latestCloseMinutes ?? -1;
+          const cB = spotB.latestCloseMinutes ?? -1;
+          if (cB !== cA) return cB - cA;
+        }
+
+        if (spotA.recommendedRank !== spotB.recommendedRank) {
+          return spotA.recommendedRank - spotB.recommendedRank;
+        }
+        return spotA.id.localeCompare(spotB.id);
+      });
+
+      let visibleCount = 0;
+      for (const card of sortedCards) {
+        const spot = spotById.get(card.dataset.spotId ?? "");
+        if (!spot) continue;
+
+        const tabOk =
+          activeTab === "all" || spot.purposes.includes(activeTab);
+        const areaOk =
+          selectedArea === "all" || spot.areaGroup === selectedArea;
+        const districtOk = district === "all" || spot.district === district;
+        const ssidOk =
+          ssid === "all" ||
+          (ssid === "none" ? spot.ssid === null : spot.ssid === ssid);
+        const keywordOk = keyword === "" || spot.searchText.includes(keyword);
+        const quickOk = matchesQuickFilters(spot);
+
+        const visible =
+          tabOk && areaOk && districtOk && ssidOk && keywordOk && quickOk;
+        card.classList.toggle("hidden", !visible);
+        if (visible) visibleCount++;
+        listEl?.appendChild(card);
+      }
+
+      if (visibleCountEl) {
+        visibleCountEl.textContent = String(visibleCount);
+      }
+      emptyStateEl?.classList.toggle("hidden", visibleCount > 0);
+    }
+
+    function resetAllFilters(): void {
+      activeQuickFilters.clear();
+      selectedArea = "all";
+      if (districtSelect) districtSelect.value = "all";
+      if (ssidSelect) ssidSelect.value = "all";
+      if (keywordInput) keywordInput.value = "";
+      if (sortSelect) sortSelect.value = "recommended";
+      updateQuickButtons();
+      updateAreaButtons();
+      applyFilterAndSort();
+    }
+
+    for (const btn of tabButtons) {
+      btn.addEventListener("click", () => {
+        const nextTab = btn.dataset.tabBtn as WifiPurpose | "all" | undefined;
+        if (!nextTab) return;
+        activeTab = nextTab;
+        updateTabButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    for (const btn of quickButtons) {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.quickBtn ?? "";
+        if (!key) return;
+        if (activeQuickFilters.has(key)) {
+          activeQuickFilters.delete(key);
+        } else {
+          activeQuickFilters.add(key);
+        }
+        if (key === "open-now") {
+          refreshOpenStatuses();
+        }
+        updateQuickButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    for (const btn of areaButtons) {
+      btn.addEventListener("click", () => {
+        selectedArea = (btn.dataset.areaBtn as "all" | WifiAreaGroup) ?? "all";
+        updateAreaButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    districtSelect?.addEventListener("change", applyFilterAndSort);
+    ssidSelect?.addEventListener("change", applyFilterAndSort);
+    keywordInput?.addEventListener("input", applyFilterAndSort);
+    sortSelect?.addEventListener("change", () => {
+      if (sortSelect.value === "distance" && !userLocation) {
+        requestGeolocationAndSort();
+        return;
+      }
+      applyFilterAndSort();
+    });
+
+    geoButton?.addEventListener("click", requestGeolocationAndSort);
+    resetButton?.addEventListener("click", resetAllFilters);
+    emptyResetButton?.addEventListener("click", () => {
+      activeTab = "all";
+      updateTabButtons();
+      resetAllFilters();
+    });
+
+    for (const copyBtn of document.querySelectorAll<HTMLButtonElement>(
+      "[data-copy-ssid]",
+    )) {
+      copyBtn.addEventListener("click", async () => {
+        const ssidText = copyBtn.dataset.copySsid;
+        if (!ssidText || !navigator.clipboard) return;
+        try {
+          await navigator.clipboard.writeText(ssidText);
+          const original = copyBtn.textContent ?? "SSIDコピー";
+          copyBtn.textContent = "コピー済";
+          copyBtn.disabled = true;
+          window.setTimeout(() => {
+            copyBtn.textContent = original;
+            copyBtn.disabled = false;
+          }, 1500);
+        } catch {
+          // Clipboard permission may be unavailable in non-HTTPS contexts
+        }
+      });
+    }
+
+    refreshOpenStatuses();
+    updateTabButtons();
+    updateQuickButtons();
+    updateAreaButtons();
+    applyFilterAndSort();
+  </script>
+</BaseLayout>

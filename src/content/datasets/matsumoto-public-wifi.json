@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-public-wifi",
+  "name": "松本市 公衆無線LANアクセスポイント一覧",
+  "provider": "松本市（DX推進本部）",
+  "description": "松本市内の観光スポット・公民館・図書館・文化施設・庁舎等に整備されている公衆無線LAN（Free Wi-Fi）の施設名称・住所・SSID・AP数・座標データ。松本デジタルまっぷで公開。",
+  "sourceUrl": "https://www2.wagmap.jp/matsumoto/OpenDataDetail?lid=32&mids=23",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+  "attribution": "松本市 DX推進本部「公衆無線LANアクセスポイント」（松本デジタルまっぷ公開 / クリエイティブ・コモンズ・ライセンス 表示 4.0 国際）",
+  "format": ["CSV", "Shapefile", "KML"],
+  "updateFrequency": "随時更新",
+  "updatedAt": "2026-11-28",
+  "notes": "松本デジタルまっぷのオープンデータCSV（opendata_32.csv）を取得・整形しています。松本市図書館公式案内で全11館導入とされている MLib-wifi のうち、CSVに未掲載の「あがたの森図書館」は公共施設データを用いて補完しています。"
+}

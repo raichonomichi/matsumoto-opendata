@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-public-facilities",
+  "name": "松本市 公共施設データ（松本デジタルまっぷ）",
+  "provider": "松本市（DX推進本部）",
+  "description": "松本市内の公共施設（庁舎、教育・文化・スポーツ、消防・防災、福祉・保健、上下水道、その他）の名称・所在地・地域区分・区分・電話番号・利用可能曜日・開館時間・休館日特記事項・座標データ。",
+  "sourceUrl": "https://www2.wagmap.jp/matsumoto/OpenData",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/deed.ja",
+  "attribution": "松本市 DX推進本部「公共施設データ（庁舎／教育・文化・スポーツ／消防・防災／福祉・保健／上下水道／その他）」（松本デジタルまっぷ公開 / クリエイティブ・コモンズ・ライセンス 表示 4.0 国際）",
+  "format": ["CSV", "Shapefile", "KML"],
+  "updateFrequency": "随時更新",
+  "updatedAt": "2026-11-28",
+  "notes": "公衆無線LANスポットへ開館時間・休館日・地域区分・連絡先を結合するために利用しています。一部施設の古い工事休館表記は公式案内への確認導線へフォールバックしています。"
+}

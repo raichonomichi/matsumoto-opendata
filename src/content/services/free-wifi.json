@@ -1,0 +1,14 @@
+{
+  "id": "free-wifi",
+  "title": "松本フリーWi-Fi 目的別ファインダー",
+  "summary": "PC作業・勉強、観光・山岳エリアでの立ち寄り、会議・貸館まで。松本市の公衆無線LANと公共施設・祝日データを掛け合わせ、目的・エリア・今開館中（目安）・現在地からの距離で探せます。",
+  "status": "published",
+  "path": "/free-wifi/",
+  "datasets": [
+    "matsumoto-public-wifi",
+    "matsumoto-public-facilities",
+    "cao-national-holidays"
+  ],
+  "tags": ["フリーWi-Fi", "PC作業・勉強", "公共施設", "観光"],
+  "publishedAt": "2026-11-28"
+}

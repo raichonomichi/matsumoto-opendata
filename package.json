@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "pipeline:yamagoya": "tsx pipelines/build-yamagoya.ts",
     "pipeline:matsumoto-castle": "tsx pipelines/build-matsumoto-castle.ts",
+    "pipeline:free-wifi": "tsx pipelines/build-free-wifi.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
