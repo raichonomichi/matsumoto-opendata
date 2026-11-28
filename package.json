@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "pipeline:yamagoya": "tsx pipelines/build-yamagoya.ts",
+    "pipeline:matsumoto-castle": "tsx pipelines/build-matsumoto-castle.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {

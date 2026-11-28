@@ -1,0 +1,14 @@
+{
+  "id": "matsumoto-tourism-monthly",
+  "name": "松本市観光地延利用者数（月別 H25〜R7）",
+  "provider": "松本市（文化観光部 観光ブランド課）",
+  "description": "国宝松本城をはじめとする松本市内主要観光地の月別延利用者数（観光入込客数）統計。",
+  "sourceUrl": "https://www.city.matsumoto.nagano.jp/soshiki/76/70854.html",
+  "license": "その他",
+  "licenseUrl": "https://www.city.matsumoto.nagano.jp/site/userguide/58387.html",
+  "attribution": "松本市 文化観光部 観光ブランド課「松本市観光地延利用者数（月別 H25〜R7）」",
+  "format": ["Excel", "PDF"],
+  "updateFrequency": "年次更新",
+  "updatedAt": "2026-11-28",
+  "notes": "公表Excel（133151.xls）より、国宝松本城の直近3年（令和5年〜令和7年 / 2023〜2025年）の月別延利用者数を出典明記のうえ構造化しています。"
+}

@@ -1,0 +1,14 @@
+{
+  "id": "cao-national-holidays",
+  "name": "国民の祝日（内閣府 CSV）",
+  "provider": "内閣府",
+  "description": "日本の国民の祝日・休日の一覧CSVデータ（昭和30年〜令和9年）。",
+  "sourceUrl": "https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv",
+  "license": "政府標準利用規約2.0",
+  "licenseUrl": "https://www.cao.go.jp/about/site_policy.html",
+  "attribution": "内閣府「国民の祝日について（syukujitsu.csv）」",
+  "format": ["CSV"],
+  "updateFrequency": "年次更新（毎年2月頃）",
+  "updatedAt": "2026-11-28",
+  "validUntil": "2027-12-31"
+}
