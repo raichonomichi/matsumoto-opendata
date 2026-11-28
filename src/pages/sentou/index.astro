@@ -1,0 +1,1410 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import {
+  type BathAccessCategory,
+  type BathAreaGroup,
+  type BathFacility,
+  type BathFacilityType,
+  type BathWaterType,
+  sentouDatasetSchema,
+} from "@/lib/sentou-schema";
+
+const rawJson = readFileSync(path.resolve("src/data/sentou.json"), "utf-8");
+const dataset = sentouDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = ["matsumoto-bath-registry", "cao-national-holidays"];
+
+type TabKey = "public_drop_in" | "day_use_or_reserved" | "restricted" | "all";
+
+const tabs: {
+  id: TabKey;
+  label: string;
+  count: number;
+  guide: string;
+}[] = [
+  {
+    id: "public_drop_in",
+    label: "一般日帰りOK（銭湯・温泉）",
+    count: dataset.counts.publicDropIn,
+    guide:
+      "予約不要で一般の方がそのまま入浴できる街の銭湯・スーパー銭湯・日帰り温泉（25施設）を表示しています。現在時刻や今日の夕方・夜の営業時間・最終受付目安で絞り込めます。",
+  },
+  {
+    id: "day_use_or_reserved",
+    label: "日帰りありの宿・予約制",
+    count: dataset.counts.dayUseOrReserved,
+    guide:
+      "日帰り入浴枠を設けている温泉旅館（時間帯・曜日限定）や、事前予約制の貸切温泉・アウトドアサウナ等を表示しています。悪天候や混雑による休止に備え、事前の公式確認・電話をおすすめします。",
+  },
+  {
+    id: "restricted",
+    label: "地元専用・宿泊専用・会員制",
+    count: dataset.counts.restricted,
+    guide:
+      "浅間温泉の地域住民・組合員（湯仲間）専用の共同浴場（12湯）、松本市内60歳以上限定の福祉風呂、宿泊者専用ホテル大浴場、会員制スポーツクラブ等の一覧です。一般外来入浴はできません。",
+  },
+  {
+    id: "all",
+    label: "すべて（台帳全件・宿含む）",
+    count: dataset.counts.total,
+    guide:
+      "松本市保健所の公衆浴場法許可台帳（matsumoto_bath）に収録されている全126施設を横断検索します。温泉街の宿泊施設等、日帰り入浴の受け入れ有無が個別に異なる施設も含まれます。",
+  },
+];
+
+const areaButtons: { id: "all" | BathAreaGroup; label: string }[] = [
+  { id: "all", label: "すべて" },
+  { id: "central", label: "松本駅・市街地" },
+  { id: "asama_utsukushigahara", label: "浅間・美ヶ原・扉温泉" },
+  { id: "suburbs", label: "梓川・波田・四賀" },
+  { id: "norikura_shirahone", label: "乗鞍・白骨・沢渡・上高地・奈川" },
+];
+
+const areaLabels: Record<BathAreaGroup, string> = {
+  central: "松本駅・市街地",
+  asama_utsukushigahara: "浅間・美ヶ原・扉温泉",
+  suburbs: "梓川・波田・四賀",
+  norikura_shirahone: "乗鞍・白骨・沢渡・上高地・奈川",
+};
+
+const accessBadgeClasses: Record<BathAccessCategory, string> = {
+  public_drop_in: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  day_use_inn: "bg-sky-50 text-sky-800 ring-sky-200",
+  reservation_required: "bg-indigo-50 text-indigo-800 ring-indigo-200",
+  local_only: "bg-rose-50 text-rose-800 ring-rose-200",
+  eligible_only: "bg-amber-50 text-amber-800 ring-amber-200",
+  members_only: "bg-slate-100 text-slate-700 ring-slate-200",
+  guests_only: "bg-slate-100 text-slate-700 ring-slate-200",
+  check_lodging_or_status: "bg-amber-50 text-amber-800 ring-amber-200",
+};
+
+const facilityTypeLabels: Record<BathFacilityType, string> = {
+  sentou: "街の銭湯",
+  super_sentou: "スーパー銭湯",
+  day_onsen: "日帰り温泉",
+  communal_bath: "共同浴場",
+  public_facility: "公共入浴施設",
+  onsen_inn: "日帰り可能な宿",
+  sauna_retreat: "サウナ・貸切湯",
+  welfare_bath: "福祉風呂",
+  fitness_golf: "クラブ・施設内浴場",
+  lodging_other: "宿泊施設・その他",
+};
+
+const waterLabels: Record<BathWaterType, string> = {
+  onsen: "天然温泉",
+  non_onsen: "沸かし湯・温浴",
+  sauna_specialty: "サウナ・陶板浴等",
+  unknown: "泉質等要確認",
+};
+
+const timePresets = [
+  { id: "now", label: "現在時刻（JST）" },
+  { id: "today_17", label: "今日の17:00" },
+  { id: "today_20", label: "今日の20:00" },
+  { id: "tomorrow_08", label: "明日の朝8:00" },
+] as const;
+
+const quickFilters = [
+  { id: "can-enter-today", label: "今日これから入れる" },
+  { id: "open-now", label: "今すぐ入れる（受付中）" },
+  { id: "onsen", label: "天然温泉" },
+  { id: "sentou", label: "街の銭湯（一般公衆浴場）" },
+  { id: "sauna", label: "サウナあり" },
+  { id: "rotenburo", label: "露天風呂あり" },
+  { id: "morning-bath", label: "朝風呂OK（〜9時開店）" },
+  { id: "late-night", label: "夜遅くOK（21時以降受付）" },
+] as const;
+
+const useCases = [
+  {
+    title: "今すぐお風呂やサウナに入りたい時",
+    description:
+      "「今すぐ入れる（受付中）」と現在地距離で、最終受付にまだ間に合う街の銭湯・スーパー銭湯・日帰り温泉をすぐに絞り込めます。",
+  },
+  {
+    title: "仕事帰りや明日の朝風呂を調べたい時",
+    description:
+      "「今日の20:00」「明日の朝8:00」など判定時刻を切り替え、定休日・第N火曜/水曜休館・祝日の振替休館を織り込んだ目安を確認できます。",
+  },
+  {
+    title: "浅間・白骨・上高地で一般利用できるか確認したい時",
+    description:
+      "一般開放されている施設と、浅間温泉の地元専用（ジモ専）12湯・宿泊専用ホテル・冬季閉鎖の野天風呂を明確に分けて案内しています。",
+  },
+] as const;
+
+function getTabForFacility(f: BathFacility): Exclude<TabKey, "all"> {
+  if (f.accessCategory === "public_drop_in") return "public_drop_in";
+  if (
+    f.accessCategory === "day_use_inn" ||
+    f.accessCategory === "reservation_required"
+  ) {
+    return "day_use_or_reserved";
+  }
+  if (
+    f.accessCategory === "local_only" ||
+    f.accessCategory === "eligible_only" ||
+    f.accessCategory === "members_only" ||
+    f.accessCategory === "guests_only"
+  ) {
+    return "restricted";
+  }
+  return "all" as never;
+}
+
+function getSsrInitialBadge(f: BathFacility): {
+  label: string;
+  badgeClass: string;
+} {
+  if (f.schedule.kind === "not_public") {
+    return {
+      label: "一般外来不可",
+      badgeClass: "bg-rose-50 text-rose-800 ring-rose-200",
+    };
+  }
+  if (f.schedule.kind === "check_official") {
+    return {
+      label: "利用条件・営業時間要確認",
+      badgeClass: "bg-amber-50 text-amber-800 ring-amber-200",
+    };
+  }
+  return {
+    label: "営業目安あり",
+    badgeClass: "bg-slate-100 text-slate-700 ring-slate-200",
+  };
+}
+
+function buildSearchText(f: BathFacility): string {
+  return [
+    f.name,
+    f.registryName,
+    f.address,
+    f.subArea,
+    areaLabels[f.areaGroup],
+    f.accessLabel,
+    f.accessNote ?? "",
+    facilityTypeLabels[f.facilityType],
+    waterLabels[f.waterType],
+    f.permitCategory,
+    f.operator ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+const embeddedPayload = {
+  holidays: dataset.holidays,
+  tabGuides: Object.fromEntries(tabs.map((t) => [t.id, t.guide])),
+  facilities: dataset.facilities.map((f) => ({
+    id: f.id,
+    tabGroup: getTabForFacility(f),
+    accessCategory: f.accessCategory,
+    permitCategory: f.permitCategory,
+    permittedAt: f.permittedAt ?? "0000-00-00",
+    areaGroup: f.areaGroup,
+    waterType: f.waterType,
+    hasSauna: f.hasSauna,
+    hasRotenburo: f.hasRotenburo,
+    hasMorningBath: f.hasMorningBath,
+    openLateNight: f.openLateNight,
+    latestLastEntryMinutes: f.latestLastEntryMinutes,
+    lat: f.lat,
+    lng: f.lng,
+    recommendedRank: f.recommendedRank,
+    schedule: f.schedule,
+    searchText: buildSearchText(f),
+  })),
+};
+const embeddedJson = JSON.stringify(embeddedPayload).replace(/</g, "\\u003c");
+---
+
+<BaseLayout
+  title="松本 銭湯・温泉・温浴施設さがし"
+  description="街の銭湯・スーパー銭湯・日帰り温泉から地元専用浴場・宿泊者限定施設まで。松本市の公衆浴場台帳（126件）と祝日データをもとに、どこにあって・一般利用できるか・今日これから入れるかを調べられます。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-9 text-white sm:px-9 sm:py-11">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-alps-200 ring-1 ring-white/15">
+          松本市 公衆浴場台帳 × 国民の祝日データ
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          台帳基準: 2026-10-01 / サイト更新: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        松本 銭湯・温泉・温浴施設さがし
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        「どこに銭湯や温泉があるか」「一般の人でも日帰り利用できるか」「今日これから最終受付に間に合うか」——松本市保健所の公衆浴場台帳（126件）に営業時間・定休日・祝日振替・冬季閉鎖ルールを重ね合わせ、迷わず行き先を探せます。
+      </p>
+
+      <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">一般日帰りOK</p>
+          <p class="mt-0.5 text-xl font-bold">
+            {dataset.counts.publicDropIn} 施設
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            うち街の銭湯 {dataset.counts.ippanSentou} 軒
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">今すぐ入れる（受付中）</p>
+          <p class="mt-0.5 text-xl font-bold">
+            <span id="summary-open-now">—</span> 施設
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            一般日帰り {dataset.counts.publicDropIn} 施設内の目安
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">今日これから開店</p>
+          <p class="mt-0.5 text-xl font-bold">
+            <span id="summary-opening-later">—</span> 施設
+          </p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            一般日帰り {dataset.counts.publicDropIn} 施設内の目安
+          </p>
+        </div>
+        <div class="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">公衆浴場台帳 収録総数</p>
+          <p class="mt-0.5 text-xl font-bold">{dataset.counts.total} 件</p>
+          <p class="mt-0.5 text-[11px] text-alps-200">
+            宿の日帰り/予約 {dataset.counts.dayUseOrReserved}・地元専用 {dataset.counts.localOnly} 含む
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section aria-labelledby="use-cases-heading" class="space-y-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="use-cases-heading"
+          class="text-base font-bold text-slate-900 sm:text-lg"
+        >
+          こんな時に使えます
+        </h2>
+        <p class="text-xs text-slate-500">
+          今の受付状況／夜・翌朝の下調べ／地元専用・冬季休業の誤認防止
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {useCases.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-bold text-alps-950">{item.title}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Notice & Official Links -->
+    <aside
+      aria-label="ご利用上の注意と公式案内"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        営業時間・最終受付・臨時休業のご確認について
+      </p>
+      <p class="mt-1 text-amber-900/90">{dataset.notice}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={dataset.officialLinks.shinshuSento}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-800"
+        >
+          長野県公衆浴場組合（銭湯） ↗
+        </a>
+        <a
+          href={dataset.officialLinks.visitMatsumotoOnsen}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          新まつもと物語 温泉案内 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.asamaOnsen}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          浅間温泉公式 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.utsukushigaharaOnsen}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          美ヶ原温泉公式 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.norikura}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          のりくら温泉郷 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.shirahone}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          白骨温泉公式 ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Control Panel -->
+    <section
+      aria-label="利用区分と条件の絞り込み"
+      class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:p-6"
+    >
+      <!-- 1. Access Tabs -->
+      <div>
+        <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          1. 利用可否・施設区分を選ぶ
+        </p>
+        <div
+          role="tablist"
+          aria-label="利用区分タブ"
+          class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {tabs.map((tab) => {
+            const isInitial = tab.id === "public_drop_in";
+            return (
+              <button
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                data-tab-btn={tab.id}
+                aria-selected={isInitial ? "true" : "false"}
+                aria-controls="facility-list-section"
+                class:list={[
+                  "flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-left text-xs font-semibold transition sm:text-sm",
+                  isInitial
+                    ? "border-alps-900 bg-alps-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-800 hover:border-alps-400 hover:bg-alps-50/60",
+                ]}
+              >
+                <span>{tab.label}</span>
+                <span
+                  data-tab-badge
+                  class:list={[
+                    "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
+                    isInitial
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-700",
+                  ]}
+                >
+                  {tab.count}件
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p
+          id="tab-guide"
+          class="mt-3 rounded-xl border border-alps-200/80 bg-white px-4 py-2.5 text-xs leading-relaxed text-slate-700"
+        >
+          {tabs[0].guide}
+        </p>
+      </div>
+
+      <!-- 2. Time Presets -->
+      <div class="border-t border-slate-200/80 pt-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            2. いつの入浴可否を調べるか（JST）
+          </p>
+          <p id="jst-clock" class="font-mono text-[11px] text-slate-600"></p>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2">
+          {timePresets.map((preset) => {
+            const isSelected = preset.id === "now";
+            return (
+              <button
+                type="button"
+                data-preset-btn={preset.id}
+                aria-pressed={isSelected ? "true" : "false"}
+                class:list={[
+                  "rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
+                  isSelected
+                    ? "bg-alps-900 text-white"
+                    : "border border-slate-300 bg-white text-slate-700 hover:border-alps-400 hover:text-alps-900",
+                ]}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- 3. Quick Condition Chips -->
+      <div class="border-t border-slate-200/80 pt-4">
+        <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          3. 条件で絞り込む（複数選択可）
+        </p>
+        <div class="flex flex-wrap gap-2">
+          {quickFilters.map((chip) => (
+            <button
+              type="button"
+              data-quick-btn={chip.id}
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <!-- 4. Area Buttons -->
+      <div class="border-t border-slate-200/80 pt-4">
+        <p class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+          4. エリアを選ぶ
+        </p>
+        <div class="flex flex-wrap gap-2">
+          {areaButtons.map((area) => {
+            const isSelected = area.id === "all";
+            return (
+              <button
+                type="button"
+                data-area-btn={area.id}
+                aria-pressed={isSelected ? "true" : "false"}
+                class:list={[
+                  "rounded-full px-3.5 py-1.5 text-xs font-semibold transition",
+                  isSelected
+                    ? "bg-alps-900 text-white"
+                    : "border border-slate-300 bg-white text-slate-700 hover:border-alps-400 hover:text-alps-900",
+                ]}
+              >
+                {area.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- 5. Keyword Search & Sort -->
+      <div class="grid gap-3 border-t border-slate-200/80 pt-4 sm:grid-cols-2">
+        <div>
+          <label
+            for="filter-keyword"
+            class="block text-xs font-medium text-slate-700"
+          >
+            キーワード検索
+          </label>
+          <input
+            id="filter-keyword"
+            type="search"
+            placeholder="施設名・温泉地・地域・住所など（例: 浅間温泉 / サウナ）"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-alps-600 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label
+            for="sort-order"
+            class="block text-xs font-medium text-slate-700"
+          >
+            並び替え
+          </label>
+          <select
+            id="sort-order"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-alps-600 focus:outline-none"
+          >
+            <option value="available_first">今日入れる優先（おすすめ順）</option>
+            <option value="recommended">おすすめ順（固定）</option>
+            <option value="distance">現在地から近い順</option>
+            <option value="last_entry_desc">最終受付が遅い順</option>
+            <option value="permitted_desc">台帳の許可日が新しい順</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Geolocation & Result Status Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-4">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            id="btn-geolocation"
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-alps-300 bg-white px-3.5 py-2 text-xs font-semibold text-alps-900 transition hover:border-alps-500 hover:bg-alps-50"
+          >
+            <span aria-hidden="true">📍</span>
+            <span>現在地から近い順に並べる</span>
+          </button>
+          <p class="text-[11px] text-slate-500">
+            ※位置情報はブラウザ内の距離計算のみに使用し、外部送信しません
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <p class="text-xs font-semibold text-slate-700">
+            <span id="visible-count">{dataset.counts.publicDropIn}</span> / {dataset.count} 件表示中
+          </p>
+          <button
+            id="filter-reset"
+            type="button"
+            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+          >
+            条件リセット
+          </button>
+        </div>
+      </div>
+
+      <p
+        id="geo-status"
+        role="status"
+        aria-live="polite"
+        class="hidden rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-700"
+      ></p>
+    </section>
+
+    <!-- Facility Cards -->
+    <section id="facility-list-section" aria-label="施設一覧" class="space-y-4">
+      <div id="facility-list" class="grid gap-4 md:grid-cols-2">
+        {dataset.facilities.map((facility) => {
+          const isInitialVisible = facility.accessCategory === "public_drop_in";
+          const ssrBadge = getSsrInitialBadge(facility);
+          const googleMapsUrl =
+            facility.lat !== null && facility.lng !== null
+              ? `https://www.google.com/maps/search/?api=1&query=${facility.lat},${facility.lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(facility.mapQuery)}`;
+          return (
+            <article
+              data-facility-card
+              data-facility-id={facility.id}
+              class:list={[
+                "flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-alps-300 hover:shadow-sm",
+                !isInitialVisible && "hidden",
+              ]}
+            >
+              <div>
+                <!-- Badges -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span
+                    data-status-badge
+                    class:list={[
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1",
+                      ssrBadge.badgeClass,
+                    ]}
+                  >
+                    {ssrBadge.label}
+                  </span>
+
+                  <span
+                    class:list={[
+                      "rounded-full px-2.5 py-0.5 text-[11px] font-medium ring-1",
+                      accessBadgeClasses[facility.accessCategory],
+                    ]}
+                  >
+                    {facility.accessLabel}
+                  </span>
+
+                  <span
+                    data-distance-badge
+                    class="hidden rounded-full bg-alps-900 px-2.5 py-0.5 text-[11px] font-semibold text-white"
+                  />
+
+                  {facility.waterType === "onsen" && (
+                    <span class="rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-medium text-orange-800 ring-1 ring-orange-200">
+                      天然温泉
+                    </span>
+                  )}
+
+                  {facility.permitCategory === "一般公衆浴場" && (
+                    <span class="rounded-full bg-alps-50 px-2.5 py-0.5 text-[11px] font-medium text-alps-800 ring-1 ring-alps-200">
+                      街の銭湯
+                    </span>
+                  )}
+
+                  {facility.hasSauna && (
+                    <span class="rounded-full bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 ring-1 ring-violet-200">
+                      サウナあり
+                    </span>
+                  )}
+
+                  {facility.hasRotenburo && (
+                    <span class="rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-200">
+                      露天風呂
+                    </span>
+                  )}
+
+                  {facility.hasMorningBath && (
+                    <span class="rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-medium text-sky-800 ring-1 ring-sky-200">
+                      朝風呂OK
+                    </span>
+                  )}
+                </div>
+
+                <!-- Title & Location -->
+                <h3 class="mt-3 text-base font-bold leading-snug text-slate-900 sm:text-lg">
+                  {facility.name}
+                </h3>
+                {facility.registryName !== facility.name && (
+                  <p class="mt-0.5 text-[11px] text-slate-500">
+                    台帳表記: {facility.registryName}
+                  </p>
+                )}
+                <p class="mt-1 text-xs text-slate-500">
+                  {facilityTypeLabels[facility.facilityType]} / {areaLabels[facility.areaGroup]}（{facility.subArea}）
+                </p>
+                <p class="mt-1 text-xs text-slate-600">
+                  {facility.postalCode ? `〒${facility.postalCode} ` : ""}
+                  {facility.address}
+                </p>
+
+                <!-- Dynamic Today Availability Box -->
+                <div
+                  data-availability-box
+                  class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs"
+                >
+                  <p class="text-[11px] font-semibold text-slate-500">
+                    選択日時の営業・受付目安
+                  </p>
+                  <p
+                    data-availability-detail
+                    class="mt-0.5 font-semibold text-slate-900"
+                  >
+                    {facility.schedule.summaryText}
+                  </p>
+                  <p
+                    data-today-hours
+                    class="mt-0.5 hidden text-[11px] text-alps-800"
+                  />
+                </div>
+
+                <!-- Details -->
+                <dl class="mt-3 space-y-2 text-xs leading-relaxed text-slate-700">
+                  <div>
+                    <dt class="font-semibold text-slate-500">通常営業時間</dt>
+                    <dd class="mt-0.5 font-medium text-slate-900">
+                      {facility.schedule.summaryText}
+                      {facility.schedule.lastEntryText && (
+                        <span class="ml-1.5 text-[11px] font-normal text-slate-600">
+                          （最終受付: {facility.schedule.lastEntryText}）
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+
+                  {(facility.schedule.holidayNote ||
+                    facility.schedule.irregularNote) && (
+                    <div>
+                      <dt class="font-semibold text-slate-500">定休日・注記</dt>
+                      <dd class="mt-0.5 text-slate-600">
+                        {[
+                          facility.schedule.holidayNote,
+                          facility.schedule.irregularNote,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ")}
+                      </dd>
+                    </div>
+                  )}
+
+                  {facility.feeSummary && (
+                    <div>
+                      <dt class="font-semibold text-slate-500">入浴料目安</dt>
+                      <dd class="mt-0.5 text-slate-800">{facility.feeSummary}</dd>
+                    </div>
+                  )}
+
+                  {facility.accessNote && (
+                    <div>
+                      <dt class="font-semibold text-slate-500">
+                        施設案内・利用条件
+                      </dt>
+                      <dd class="mt-0.5 text-slate-700">{facility.accessNote}</dd>
+                    </div>
+                  )}
+
+                  {facility.phone && (
+                    <div>
+                      <dt class="inline font-semibold text-slate-500">電話: </dt>
+                      <dd class="inline">
+                        <a
+                          href={`tel:${facility.phone.replace(/[^0-9+]/g, "")}`}
+                          class="font-medium text-alps-800 underline decoration-alps-300 underline-offset-2 hover:text-alps-950"
+                        >
+                          {facility.phone}
+                        </a>
+                      </dd>
+                    </div>
+                  )}
+
+                  <div class="pt-0.5 text-[11px] text-slate-500">
+                    台帳区分: {facility.permitCategory}（ID {facility.sourceRecordId}
+                    {facility.permittedAt ? ` / 許可日 ${facility.permittedAt}` : ""}
+                    {facility.permitNumber ? ` / ${facility.permitNumber}` : ""}）
+                  </div>
+                </dl>
+              </div>
+
+              <!-- Footer Actions -->
+              <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center rounded-lg bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-alps-800"
+                >
+                  Googleマップで開く ↗
+                </a>
+                {facility.officialUrl && (
+                  <a
+                    href={facility.officialUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-950"
+                  >
+                    公式サイトを見る ↗
+                  </a>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <!-- Smart Empty State -->
+      <div
+        id="empty-state"
+        class="hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"
+      >
+        <p class="text-sm font-semibold text-slate-800">
+          現在のタブ・条件に一致する施設が見つかりませんでした
+        </p>
+        <p id="empty-hint" class="mt-1 text-xs text-slate-600">
+          検索条件を変えるか、条件をリセットしてお試しください。
+        </p>
+        <div class="mt-4 flex flex-wrap justify-center gap-2">
+          <button
+            id="empty-switch-all"
+            type="button"
+            class="hidden rounded-xl bg-alps-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-alps-800"
+          >
+            台帳全件（126件）で候補を見る
+          </button>
+          <button
+            id="empty-reset"
+            type="button"
+            class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            条件をリセットする
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Guide Section -->
+    <section aria-labelledby="bath-guide-heading" class="space-y-4">
+      <div>
+        <h2
+          id="bath-guide-heading"
+          class="text-lg font-bold text-slate-900 sm:text-xl"
+        >
+          松本市の銭湯・温泉を利用するときの3つのポイント
+        </h2>
+        <p class="mt-1 text-xs text-slate-600">
+          台帳上の「公衆浴場」には街の銭湯・日帰り温泉・地元専用浴場・宿・スポーツ施設が混在しているため、以下の点にご注意ください。
+        </p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-3">
+        <article class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 class="text-sm font-bold text-alps-950">
+            1. 街の銭湯（一般公衆浴場）と入浴料金
+          </h3>
+          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+            松本市内の一般公衆浴場（7軒）は物価統制令に基づく長野県の統制額が適用され、2024年4月以降は大人500円・小学生170円が基準です。サウナ利用や貸しタオル等は別料金となる場合があります。
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 class="text-sm font-bold text-alps-950">
+            2. 浅間温泉の「地元専用」共同浴場マナー
+          </h3>
+          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+            浅間温泉の多くの共同浴場（睦の湯・柳の湯・薬師の湯など12湯）は地域住民（湯仲間・組合員）専用のため一般入浴・駐車はできません。外来利用はホットプラザ浅間・湯々庵 枇杷の湯・仙気の湯をご利用ください。
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 class="text-sm font-bold text-alps-950">
+            3. 山岳・温泉地の冬季休業と事前確認
+          </h3>
+          <p class="mt-2 text-xs leading-relaxed text-slate-600">
+            上高地・乗鞍せせらぎの湯・白骨温泉の野天風呂等は11月中旬〜4月下旬頃に冬季閉鎖されます。また、温泉宿の日帰り入浴は混雑や天候により当日制限されることがあるため事前の電話確認が安心です。
+          </p>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script
+    id="sentou-data"
+    type="application/json"
+    set:html={embeddedJson}
+  />
+
+  <script>
+    import {
+      type BathAvailability,
+      buildTargetDateForPreset,
+      evaluateBathAvailability,
+      getJstDateParts,
+      haversineDistanceKm,
+      type TimePreset,
+    } from "@/lib/sentou-schedule";
+    import type {
+      BathAccessCategory,
+      BathAreaGroup,
+      BathSchedule,
+      BathWaterType,
+    } from "@/lib/sentou-schema";
+
+    type TabKey =
+      | "public_drop_in"
+      | "day_use_or_reserved"
+      | "restricted"
+      | "all";
+
+    interface ClientFacility {
+      id: string;
+      tabGroup: string;
+      accessCategory: BathAccessCategory;
+      permitCategory: "一般公衆浴場" | "その他の公衆浴場";
+      permittedAt: string;
+      areaGroup: BathAreaGroup;
+      waterType: BathWaterType;
+      hasSauna: boolean;
+      hasRotenburo: boolean;
+      hasMorningBath: boolean;
+      openLateNight: boolean;
+      latestLastEntryMinutes: number | null;
+      lat: number | null;
+      lng: number | null;
+      recommendedRank: number;
+      schedule: BathSchedule;
+      searchText: string;
+    }
+
+    interface EmbeddedPayload {
+      holidays: Record<string, string>;
+      tabGuides: Record<string, string>;
+      facilities: ClientFacility[];
+    }
+
+    const dataEl = document.getElementById("sentou-data");
+    const payload: EmbeddedPayload = dataEl?.textContent
+      ? JSON.parse(dataEl.textContent)
+      : { holidays: {}, tabGuides: {}, facilities: [] };
+
+    const facilityById = new Map(payload.facilities.map((f) => [f.id, f]));
+
+    const listEl = document.getElementById("facility-list");
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-facility-card]"),
+    );
+    const tabButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-tab-btn]"),
+    );
+    const presetButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-preset-btn]"),
+    );
+    const quickButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-quick-btn]"),
+    );
+    const areaButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-area-btn]"),
+    );
+    const tabGuideEl = document.getElementById("tab-guide");
+    const keywordInput = document.getElementById(
+      "filter-keyword",
+    ) as HTMLInputElement | null;
+    const sortSelect = document.getElementById(
+      "sort-order",
+    ) as HTMLSelectElement | null;
+    const geoButton = document.getElementById(
+      "btn-geolocation",
+    ) as HTMLButtonElement | null;
+    const geoStatusEl = document.getElementById("geo-status");
+    const jstClockEl = document.getElementById("jst-clock");
+    const visibleCountEl = document.getElementById("visible-count");
+    const summaryOpenNowEl = document.getElementById("summary-open-now");
+    const summaryOpeningLaterEl = document.getElementById(
+      "summary-opening-later",
+    );
+    const emptyStateEl = document.getElementById("empty-state");
+    const emptyHintEl = document.getElementById("empty-hint");
+    const emptySwitchAllBtn = document.getElementById("empty-switch-all");
+    const resetButton = document.getElementById("filter-reset");
+    const emptyResetButton = document.getElementById("empty-reset");
+
+    let activeTab: TabKey = "public_drop_in";
+    let activePreset: TimePreset = "now";
+    let selectedArea: "all" | BathAreaGroup = "all";
+    const activeQuickFilters = new Set<string>();
+    let userLocation: { lat: number; lng: number } | null = null;
+    const distanceMap = new Map<string, number>();
+    let availabilities = new Map<string, BathAvailability>();
+
+    const STATUS_BADGE_CLASSES: Record<BathAvailability["status"], string> = {
+      open_now: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+      opening_later_today: "bg-sky-50 text-sky-800 ring-sky-200",
+      closed_today: "bg-slate-100 text-slate-600 ring-slate-200",
+      check_official: "bg-amber-50 text-amber-800 ring-amber-200",
+      not_public: "bg-rose-50 text-rose-800 ring-rose-200",
+    };
+
+    const BOX_CLASSES: Record<BathAvailability["status"], string> = {
+      open_now: "mt-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs",
+      opening_later_today:
+        "mt-3 rounded-xl border border-sky-200 bg-sky-50/70 px-3.5 py-2.5 text-xs",
+      closed_today:
+        "mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs",
+      check_official:
+        "mt-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5 text-xs",
+      not_public:
+        "mt-3 rounded-xl border border-rose-200 bg-rose-50/60 px-3.5 py-2.5 text-xs",
+    };
+
+    const STATUS_SORT_WEIGHT: Record<BathAvailability["status"], number> = {
+      open_now: 0,
+      opening_later_today: 1,
+      check_official: 2,
+      closed_today: 3,
+      not_public: 4,
+    };
+
+    const WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"];
+
+    function refreshAvailabilities(): void {
+      const targetDate = buildTargetDateForPreset(new Date(), activePreset);
+      const jst = getJstDateParts(targetDate);
+      if (jstClockEl) {
+        const hh = String(Math.floor(jst.minutesOfDay / 60)).padStart(2, "0");
+        const mm = String(jst.minutesOfDay % 60).padStart(2, "0");
+        const hol = payload.holidays[jst.ymd]
+          ? ` [${payload.holidays[jst.ymd]}]`
+          : "";
+        jstClockEl.textContent = `判定基準: ${jst.year}/${String(jst.month).padStart(2, "0")}/${String(jst.day).padStart(2, "0")}(${WEEKDAY_JA[jst.weekday]})${hol} ${hh}:${mm} JST`;
+      }
+
+      const nextMap = new Map<string, BathAvailability>();
+      let openNowPublic = 0;
+      let openingLaterPublic = 0;
+
+      for (const f of payload.facilities) {
+        const av = evaluateBathAvailability(
+          f.schedule,
+          targetDate,
+          payload.holidays,
+        );
+        nextMap.set(f.id, av);
+        if (f.accessCategory === "public_drop_in") {
+          if (av.status === "open_now") openNowPublic++;
+          if (av.status === "opening_later_today") openingLaterPublic++;
+        }
+      }
+      availabilities = nextMap;
+
+      if (summaryOpenNowEl) {
+        summaryOpenNowEl.textContent = String(openNowPublic);
+      }
+      if (summaryOpeningLaterEl) {
+        summaryOpeningLaterEl.textContent = String(openingLaterPublic);
+      }
+
+      for (const card of cards) {
+        const id = card.dataset.facilityId ?? "";
+        const av = availabilities.get(id);
+        if (!av) continue;
+
+        const badge = card.querySelector<HTMLElement>("[data-status-badge]");
+        if (badge) {
+          badge.textContent = av.label;
+          badge.className = `inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${STATUS_BADGE_CLASSES[av.status]}`;
+        }
+
+        const box = card.querySelector<HTMLElement>("[data-availability-box]");
+        if (box) {
+          box.className = BOX_CLASSES[av.status];
+        }
+
+        const detailEl = card.querySelector<HTMLElement>(
+          "[data-availability-detail]",
+        );
+        if (detailEl) {
+          detailEl.textContent = av.detailText ?? av.label;
+        }
+
+        const hoursEl = card.querySelector<HTMLElement>("[data-today-hours]");
+        if (hoursEl) {
+          if (av.todayHoursText) {
+            hoursEl.textContent = `選択日の営業時間目安: ${av.todayHoursText}`;
+            hoursEl.classList.remove("hidden");
+          } else {
+            hoursEl.textContent = "";
+            hoursEl.classList.add("hidden");
+          }
+        }
+      }
+    }
+
+    function updateTabButtons(): void {
+      for (const btn of tabButtons) {
+        const isSelected = btn.dataset.tabBtn === activeTab;
+        btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "flex items-center justify-between gap-2 rounded-xl border border-alps-900 bg-alps-900 px-3.5 py-2.5 text-left text-xs font-semibold text-white shadow-sm transition sm:text-sm"
+          : "flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-xs font-semibold text-slate-800 transition hover:border-alps-400 hover:bg-alps-50/60 sm:text-sm";
+        const badge = btn.querySelector<HTMLElement>("[data-tab-badge]");
+        if (badge) {
+          badge.className = isSelected
+            ? "shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white"
+            : "shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700";
+        }
+      }
+      if (tabGuideEl && payload.tabGuides[activeTab]) {
+        tabGuideEl.textContent = payload.tabGuides[activeTab];
+      }
+    }
+
+    function updatePresetButtons(): void {
+      for (const btn of presetButtons) {
+        const isSelected = btn.dataset.presetBtn === activePreset;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-full bg-alps-900 px-3.5 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function updateQuickButtons(): void {
+      for (const btn of quickButtons) {
+        const key = btn.dataset.quickBtn ?? "";
+        const isPressed = activeQuickFilters.has(key);
+        btn.setAttribute("aria-pressed", isPressed ? "true" : "false");
+        btn.className = isPressed
+          ? "rounded-full border border-alps-900 bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function updateAreaButtons(): void {
+      for (const btn of areaButtons) {
+        const isSelected = btn.dataset.areaBtn === selectedArea;
+        btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+        btn.className = isSelected
+          ? "rounded-full bg-alps-900 px-3.5 py-1.5 text-xs font-semibold text-white transition"
+          : "rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-alps-400 hover:text-alps-900";
+      }
+    }
+
+    function showGeoStatus(
+      message: string,
+      tone: "info" | "error" | "ok",
+    ): void {
+      if (!geoStatusEl) return;
+      geoStatusEl.textContent = message;
+      geoStatusEl.className =
+        tone === "error"
+          ? "rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs text-amber-900"
+          : tone === "ok"
+            ? "rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs text-emerald-900"
+            : "rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-700";
+      geoStatusEl.classList.remove("hidden");
+    }
+
+    function requestGeolocationAndSort(): void {
+      if (!navigator.geolocation) {
+        showGeoStatus(
+          "お使いのブラウザは現在地取得（Geolocation API）に対応していません。エリアボタンやキーワード検索で絞り込んでご利用ください。",
+          "error",
+        );
+        return;
+      }
+
+      if (geoButton) geoButton.disabled = true;
+      showGeoStatus("現在地を取得しています…", "info");
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLocation = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          };
+          distanceMap.clear();
+          for (const f of payload.facilities) {
+            if (f.lat !== null && f.lng !== null) {
+              const km = haversineDistanceKm(
+                userLocation.lat,
+                userLocation.lng,
+                f.lat,
+                f.lng,
+              );
+              distanceMap.set(f.id, km);
+            }
+          }
+
+          for (const card of cards) {
+            const id = card.dataset.facilityId ?? "";
+            const km = distanceMap.get(id);
+            const distBadge = card.querySelector<HTMLElement>(
+              "[data-distance-badge]",
+            );
+            if (distBadge) {
+              if (km !== undefined) {
+                distBadge.textContent =
+                  km < 1
+                    ? `現在地から 約${Math.round(km * 1000)}m`
+                    : `現在地から 約${km.toFixed(1)}km`;
+                distBadge.classList.remove("hidden");
+              } else {
+                distBadge.classList.add("hidden");
+              }
+            }
+          }
+
+          if (sortSelect) sortSelect.value = "distance";
+          if (geoButton) geoButton.disabled = false;
+          showGeoStatus(
+            "現在地からの直線距離を計算し、近い順に並べ替えました（座標登録済みの施設を優先表示します）。",
+            "ok",
+          );
+          applyFilterAndSort();
+        },
+        (err) => {
+          if (geoButton) geoButton.disabled = false;
+          if (sortSelect && sortSelect.value === "distance" && !userLocation) {
+            sortSelect.value = "available_first";
+          }
+          const detail =
+            err.code === err.PERMISSION_DENIED
+              ? "位置情報の利用が許可されませんでした。"
+              : "現在地を取得できませんでした。";
+          showGeoStatus(
+            `${detail}エリアボタンやキーワード検索で場所をお選びください。`,
+            "error",
+          );
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+      );
+    }
+
+    function matchesFiltersWithoutTab(
+      f: ClientFacility,
+      keyword: string,
+    ): boolean {
+      if (selectedArea !== "all" && f.areaGroup !== selectedArea) return false;
+      if (keyword !== "" && !f.searchText.includes(keyword)) return false;
+
+      if (activeQuickFilters.has("can-enter-today")) {
+        const av = availabilities.get(f.id);
+        if (!av || !av.canEnterToday) return false;
+      }
+      if (activeQuickFilters.has("open-now")) {
+        const av = availabilities.get(f.id);
+        if (!av || av.status !== "open_now") return false;
+      }
+      if (activeQuickFilters.has("onsen") && f.waterType !== "onsen") {
+        return false;
+      }
+      if (
+        activeQuickFilters.has("sentou") &&
+        f.permitCategory !== "一般公衆浴場"
+      ) {
+        return false;
+      }
+      if (activeQuickFilters.has("sauna") && !f.hasSauna) return false;
+      if (activeQuickFilters.has("rotenburo") && !f.hasRotenburo) return false;
+      if (activeQuickFilters.has("morning-bath") && !f.hasMorningBath) {
+        return false;
+      }
+      if (activeQuickFilters.has("late-night") && !f.openLateNight) {
+        return false;
+      }
+      return true;
+    }
+
+    function applyFilterAndSort(): void {
+      const keyword = (keywordInput?.value ?? "").trim().toLowerCase();
+      const sortBy = sortSelect?.value ?? "available_first";
+
+      const sortedCards = [...cards].sort((a, b) => {
+        const fA = facilityById.get(a.dataset.facilityId ?? "");
+        const fB = facilityById.get(b.dataset.facilityId ?? "");
+        if (!fA || !fB) return 0;
+
+        if (sortBy === "available_first") {
+          const avA = availabilities.get(fA.id);
+          const avB = availabilities.get(fB.id);
+          const wA = avA ? STATUS_SORT_WEIGHT[avA.status] : 9;
+          const wB = avB ? STATUS_SORT_WEIGHT[avB.status] : 9;
+          if (wA !== wB) return wA - wB;
+        } else if (sortBy === "distance" && userLocation) {
+          const dA = distanceMap.get(fA.id) ?? Number.MAX_SAFE_INTEGER;
+          const dB = distanceMap.get(fB.id) ?? Number.MAX_SAFE_INTEGER;
+          if (dA !== dB) return dA - dB;
+        } else if (sortBy === "last_entry_desc") {
+          const lA = fA.latestLastEntryMinutes ?? -1;
+          const lB = fB.latestLastEntryMinutes ?? -1;
+          if (lB !== lA) return lB - lA;
+        } else if (sortBy === "permitted_desc") {
+          const cmp = fB.permittedAt.localeCompare(fA.permittedAt);
+          if (cmp !== 0) return cmp;
+        }
+
+        if (fA.recommendedRank !== fB.recommendedRank) {
+          return fA.recommendedRank - fB.recommendedRank;
+        }
+        return fA.id.localeCompare(fB.id);
+      });
+
+      let visibleCount = 0;
+      let allTabMatchCount = 0;
+
+      for (const card of sortedCards) {
+        const f = facilityById.get(card.dataset.facilityId ?? "");
+        if (!f) continue;
+
+        const nonTabOk = matchesFiltersWithoutTab(f, keyword);
+        if (nonTabOk) allTabMatchCount++;
+
+        const tabOk = activeTab === "all" || f.tabGroup === activeTab;
+        const visible = tabOk && nonTabOk;
+        card.classList.toggle("hidden", !visible);
+        if (visible) visibleCount++;
+        listEl?.appendChild(card);
+      }
+
+      if (visibleCountEl) {
+        visibleCountEl.textContent = String(visibleCount);
+      }
+
+      if (emptyStateEl) {
+        emptyStateEl.classList.toggle("hidden", visibleCount > 0);
+        if (visibleCount === 0 && emptyHintEl && emptySwitchAllBtn) {
+          if (activeTab !== "all" && allTabMatchCount > 0) {
+            emptyHintEl.textContent = `現在のタブでは一致しませんでしたが、「すべて（台帳全件 126件）」タブには ${allTabMatchCount} 件の候補（地元専用・宿泊専用・宿等）があります。`;
+            emptySwitchAllBtn.textContent = `台帳全件で ${allTabMatchCount} 件の候補を表示する`;
+            emptySwitchAllBtn.classList.remove("hidden");
+          } else {
+            emptyHintEl.textContent =
+              "検索キーワードやクイック条件・エリアを変更するか、条件をリセットしてお試しください。";
+            emptySwitchAllBtn.classList.add("hidden");
+          }
+        }
+      }
+    }
+
+    function resetAllFilters(): void {
+      activeQuickFilters.clear();
+      selectedArea = "all";
+      if (keywordInput) keywordInput.value = "";
+      if (sortSelect) sortSelect.value = "available_first";
+      updateQuickButtons();
+      updateAreaButtons();
+      applyFilterAndSort();
+    }
+
+    for (const btn of tabButtons) {
+      btn.addEventListener("click", () => {
+        const nextTab = btn.dataset.tabBtn as TabKey | undefined;
+        if (!nextTab) return;
+        activeTab = nextTab;
+        updateTabButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    for (const btn of presetButtons) {
+      btn.addEventListener("click", () => {
+        const nextPreset = btn.dataset.presetBtn as TimePreset | undefined;
+        if (!nextPreset) return;
+        activePreset = nextPreset;
+        updatePresetButtons();
+        refreshAvailabilities();
+        applyFilterAndSort();
+      });
+    }
+
+    for (const btn of quickButtons) {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.quickBtn ?? "";
+        if (!key) return;
+        if (activeQuickFilters.has(key)) {
+          activeQuickFilters.delete(key);
+        } else {
+          activeQuickFilters.add(key);
+        }
+        updateQuickButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    for (const btn of areaButtons) {
+      btn.addEventListener("click", () => {
+        selectedArea = (btn.dataset.areaBtn as "all" | BathAreaGroup) ?? "all";
+        updateAreaButtons();
+        applyFilterAndSort();
+      });
+    }
+
+    keywordInput?.addEventListener("input", applyFilterAndSort);
+    sortSelect?.addEventListener("change", () => {
+      if (sortSelect.value === "distance" && !userLocation) {
+        requestGeolocationAndSort();
+        return;
+      }
+      applyFilterAndSort();
+    });
+
+    geoButton?.addEventListener("click", requestGeolocationAndSort);
+    resetButton?.addEventListener("click", resetAllFilters);
+    emptySwitchAllBtn?.addEventListener("click", () => {
+      activeTab = "all";
+      updateTabButtons();
+      applyFilterAndSort();
+    });
+    emptyResetButton?.addEventListener("click", () => {
+      activeTab = "public_drop_in";
+      updateTabButtons();
+      resetAllFilters();
+    });
+
+    refreshAvailabilities();
+    updateTabButtons();
+    updatePresetButtons();
+    updateQuickButtons();
+    updateAreaButtons();
+    applyFilterAndSort();
+
+    window.setInterval(() => {
+      if (activePreset === "now") {
+        refreshAvailabilities();
+        applyFilterAndSort();
+      }
+    }, 60_000);
+  </script>
+</BaseLayout>
