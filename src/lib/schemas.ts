@@ -4,6 +4,7 @@ export const licenseTypes = [
   "CC BY 4.0",
   "CC BY 3.0",
   "政府標準利用規約2.0",
+  "公共データ利用規約（第1.0版）",
   "その他",
 ] as const;
 
