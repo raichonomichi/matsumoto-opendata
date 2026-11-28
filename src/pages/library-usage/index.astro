@@ -1,0 +1,3339 @@
+---
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatJaCount } from "@/lib/library-usage-metrics";
+import { libraryUsageDatasetSchema } from "@/lib/library-usage-schema";
+
+const rawJson = readFileSync(
+  path.resolve("src/data/library-usage.json"),
+  "utf-8",
+);
+const dataset = libraryUsageDatasetSchema.parse(JSON.parse(rawJson));
+
+const datasetIds = [
+  "matsumoto-library-usage",
+  "matsumoto-statistics-education",
+  "matsumoto-library-overview",
+  "nagano-library-survey",
+];
+
+const latestAnnual = dataset.annualRecords[dataset.annualRecords.length - 1];
+const r6Annual = dataset.annualRecords.find((r) => r.fiscalYear === 2024);
+const peakLoansAnnual = dataset.annualRecords.reduce((best, cur) =>
+  cur.loansTotal > best.loansTotal ? cur : best,
+);
+const milestone1980 = dataset.decadeMilestones[0];
+const latestAgeSnapshot =
+  dataset.ageGroupSnapshots[dataset.ageGroupSnapshots.length - 1];
+
+const holdings1980Multiple =
+  r6Annual?.holdingsTotal && milestone1980
+    ? (r6Annual.holdingsTotal / milestone1980.holdingsTotal).toFixed(1)
+    : "8.4";
+const loans1980Multiple = milestone1980
+  ? (latestAnnual.loansTotal / milestone1980.loansTotal).toFixed(1)
+  : "13.1";
+const loansPerCapitaLatest = (
+  latestAnnual.loansTotal / latestAnnual.population
+).toFixed(1);
+
+const takeaways = [
+  {
+    title: "1. 分館整備で蔵書8.4倍・貸出13倍へ拡大",
+    description:
+      "1980年度（2館・蔵書15.9万冊・貸出11.7万冊）から、1990〜2012年にかけての分館整備（計11館）を経て蔵書・貸出が急拡大。2015年度には個人貸出168.2万冊のピークを記録しました。",
+  },
+  {
+    title: "2. 令和2年度の基準変更と底堅い利用",
+    description:
+      "令和2年度に登録者データ削除基準を「期限切れ10年以上→2年以上未更新」へ改めたため見かけ上の登録者数は半減（11.9万→5.6万人）しましたが、貸出は150万冊前後・予約は約24〜25万冊と高い水準を維持しています。",
+  },
+  {
+    title: "3. 小中学生・子育て世代と電子化シフト",
+    description:
+      "年齢別（令和6年度）では7〜12歳の登録率40.8%・実利用率27.7%が突出。31〜50歳の子育て世代も高く、協働電子図書館「デジとしょ信州」は令和4→6年度で利用者が2.5倍へ伸びています。",
+  },
+] as const;
+
+const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
+---
+
+<BaseLayout
+  title="松本市図書館 利用状況グラフ"
+  description="松本市立図書館（全11館＋2サービスポイント）の蔵書数・登録者数・貸出冊数が年代別（1980〜2025年度の長期推移、一般 vs 児童、0歳〜71歳以上の年齢階層別）でどう変化しているかをグラフで可視化。"
+  datasetIds={datasetIds}
+>
+  <div class="space-y-8">
+    <!-- Hero -->
+    <section class="rounded-3xl border border-alps-200 bg-gradient-to-br from-alps-950 via-alps-900 to-alps-800 px-6 py-9 text-white sm:px-9 sm:py-11">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-alps-200 ring-1 ring-white/15">
+          松本市立図書館 統計グラフ（全11館＋2SP）
+        </span>
+        <span class="rounded-full bg-white/10 px-3 py-1 text-xs text-alps-100 ring-1 ring-white/15">
+          データ更新日: {dataset.generatedAt}
+        </span>
+      </div>
+
+      <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+        松本市図書館 利用状況グラフ
+      </h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-alps-100 sm:text-base">
+        蔵書数・登録者数・貸出冊数が「年代別（昭和42年〜令和7年度の時代変化、直近13年間の推移、0〜6歳〜71歳以上の年齢階層別）」および「図書館別」でどの程度変わっているかを、公開統計データからグラフでわかりやすく確認できます。
+      </p>
+
+      <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl bg-white/10 px-4 py-3.5 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">蔵書数（令和6年度・全資料）</p>
+          <p class="mt-0.5 text-xl font-bold">
+            {r6Annual?.holdingsTotal ? formatJaCount(r6Annual.holdingsTotal, "冊") : "-"}
+          </p>
+          <p class="mt-1 text-[11px] text-alps-200">
+            1980年度比 {holdings1980Multiple}倍（R7図書のみ{" "}
+            {latestAnnual.holdingsBooks
+              ? formatJaCount(latestAnnual.holdingsBooks, "冊")
+              : "-"}
+            ）
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-white/10 px-4 py-3.5 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">個人貸出冊数（令和7年度）</p>
+          <p class="mt-0.5 text-xl font-bold">
+            {formatJaCount(latestAnnual.loansTotal, "冊")}
+          </p>
+          <p class="mt-1 text-[11px] text-alps-200">
+            1980年度比 {loans1980Multiple}倍（市民1人あたり 約{loansPerCapitaLatest}冊）
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-white/10 px-4 py-3.5 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">有効登録者数（令和7年度）</p>
+          <p class="mt-0.5 text-xl font-bold">
+            {latestAnnual.registeredTotal.toLocaleString("ja-JP")}人
+          </p>
+          <p class="mt-1 text-[11px] text-alps-200">
+            うち児童 {latestAnnual.registeredChildren.toLocaleString("ja-JP")}人（R2に削除基準見直し）
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-white/10 px-4 py-3.5 ring-1 ring-white/15">
+          <p class="text-[11px] text-alps-200">貸出ピーク / 館ネットワーク</p>
+          <p class="mt-0.5 text-xl font-bold">
+            {formatJaCount(peakLoansAnnual.loansTotal, "冊")}
+          </p>
+          <p class="mt-1 text-[11px] text-alps-200">
+            {peakLoansAnnual.eraLabel}最高記録 / 本館1＋分館10＋2SP
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Takeaways -->
+    <section aria-labelledby="takeaways-heading" class="space-y-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2
+          id="takeaways-heading"
+          class="text-base font-bold text-slate-900 sm:text-lg"
+        >
+          30秒でわかる 年代別の変化ポイント
+        </h2>
+        <p class="text-xs text-slate-500">
+          昭和〜令和の整備・制度変更・世代別利用の読みどころ
+        </p>
+      </div>
+      <div class="grid gap-3 sm:grid-cols-3">
+        {takeaways.map((item) => (
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-bold text-alps-950">{item.title}</h3>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+              {item.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Notice & Official Links -->
+    <aside
+      aria-label="統計データの見方と公式案内"
+      class="rounded-2xl border border-amber-200 bg-amber-50/70 px-5 py-4 text-xs leading-relaxed text-amber-950 sm:text-sm"
+    >
+      <p class="font-semibold text-amber-900">
+        グラフを読むうえでの統計上の注記（基準変更・定義差）
+      </p>
+      <p class="mt-1 text-amber-900/90">{dataset.notice}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={dataset.officialLinks.libraryTop}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-800"
+        >
+          松本市図書館 公式HP ↗
+        </a>
+        <a
+          href={dataset.officialLinks.libraryOverview}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          図書館概要（年報PDF） ↗
+        </a>
+        <a
+          href={dataset.officialLinks.cityStats}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          松本市の統計 ↗
+        </a>
+        <a
+          href={dataset.officialLinks.chuoRenovation}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 transition hover:bg-amber-100"
+        >
+          中央図書館 長寿命化改修案内 ↗
+        </a>
+      </div>
+    </aside>
+
+    <!-- Section 1: Long-Term Era Trends (1967-2025) -->
+    <section
+      aria-labelledby="longterm-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="font-mono text-[11px] font-semibold tracking-wider text-alps-700 uppercase">
+            Long-Term Era Trends
+          </p>
+          <h2
+            id="longterm-heading"
+            class="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl"
+          >
+            年代別の長期推移（昭和〜平成〜令和）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            1980年代からの10年刻み実績と近年の変化、および分館整備に伴う館数・蔵書・貸出の伸びを比較できます。
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div
+            class="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="長期推移表示切替"
+          >
+            <button
+              type="button"
+              data-decade-tab="combined"
+              aria-pressed="true"
+              class="rounded-xl bg-alps-900 px-3 py-2 text-xs font-semibold text-white transition"
+            >
+              年代別 3指標比較（1980〜2025）
+            </button>
+            <button
+              type="button"
+              data-decade-tab="expansion"
+              aria-pressed="false"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              分館整備の歴史（1967〜2024）
+            </button>
+          </div>
+
+          <div
+            id="decade-scale-group"
+            class="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1"
+            role="group"
+            aria-label="数値または指数切替"
+          >
+            <button
+              type="button"
+              data-decade-scale="actual"
+              aria-pressed="true"
+              class="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-alps-900 shadow-xs transition"
+            >
+              実数
+            </button>
+            <button
+              type="button"
+              data-decade-scale="index"
+              aria-pressed="false"
+              class="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:text-slate-900"
+            >
+              1980年=100
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Combined 1980-2025 View -->
+      <div id="decade-combined-panel" class="mt-5 space-y-4">
+        <div class="grid gap-5 lg:grid-cols-12">
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 lg:col-span-7">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-slate-900">
+                蔵書数・個人貸出冊数の年代別推移
+              </h3>
+              <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="inline-block h-2.5 w-2.5 rounded-sm bg-alps-500" />
+                  蔵書数（全資料 / R7は図書のみ参考）
+                </span>
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="inline-block h-0.5 w-4 bg-emerald-600" />
+                  個人貸出冊数
+                </span>
+              </div>
+            </div>
+            <div id="decade-books-loans-chart" class="mt-3" />
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 lg:col-span-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-slate-900">
+                登録者数の推移（R2削除基準変更を明示）
+              </h3>
+              <span class="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+                R1→R2 破線＝基準変更
+              </span>
+            </div>
+            <div id="decade-registered-chart" class="mt-3" />
+          </div>
+        </div>
+
+        <div
+          id="decade-selected-card"
+          class="rounded-2xl border border-alps-200 bg-alps-50/60 p-4"
+        />
+      </div>
+
+      <!-- Branch Expansion 1967-2024 View -->
+      <div id="decade-expansion-panel" class="mt-5 hidden space-y-4">
+        <div class="grid gap-5 lg:grid-cols-12">
+          <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 lg:col-span-8">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-slate-900">
+                分館数の拡大と蔵書・貸出の推移（昭和42年〜令和6年）
+              </h3>
+              <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="inline-block h-2.5 w-2.5 rounded-sm bg-alps-300" />
+                  蔵書冊数
+                </span>
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="inline-block h-0.5 w-4 bg-alps-900" />
+                  個人貸出冊数
+                </span>
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="inline-block h-0.5 w-4 border-t-2 border-dashed border-amber-600" />
+                  館数（右軸）
+                </span>
+              </div>
+            </div>
+            <div id="expansion-chart-wrap" class="mt-3" />
+          </div>
+
+          <div
+            id="expansion-detail-panel"
+            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 lg:col-span-4"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: 13-Year Annual Trends (FY2013-FY2025) -->
+    <section
+      aria-labelledby="annual-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="font-mono text-[11px] font-semibold tracking-wider text-alps-700 uppercase">
+            Annual Time Series (FY2013–FY2025)
+          </p>
+          <h2
+            id="annual-heading"
+            class="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl"
+          >
+            直近13年間の毎年度推移（平成25年度〜令和7年度）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            蔵書数・登録者数・貸出冊数・市民1人あたり指標・予約相談を、全市合計または11館ごとに年単位で追跡できます。
+          </p>
+        </div>
+      </div>
+
+      <!-- 3 Mini Sparkline Cards -->
+      <div class="mt-4 grid gap-3 sm:grid-cols-3" id="annual-sparklines-row" />
+
+      <!-- Controls -->
+      <div class="mt-5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap gap-1.5" role="group" aria-label="表示指標">
+            <button
+              type="button"
+              data-annual-metric="loans"
+              aria-pressed="true"
+              class="rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+            >
+              貸出冊数
+            </button>
+            <button
+              type="button"
+              data-annual-metric="holdings"
+              aria-pressed="false"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              蔵書数
+            </button>
+            <button
+              type="button"
+              data-annual-metric="registered"
+              aria-pressed="false"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              登録者数
+            </button>
+            <button
+              type="button"
+              data-annual-metric="per_capita"
+              aria-pressed="false"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              市民1人あたり指標
+            </button>
+            <button
+              type="button"
+              data-annual-metric="services"
+              aria-pressed="false"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              予約・相談・団体貸出
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <label
+              for="annual-scope-select"
+              class="text-xs font-semibold text-slate-700"
+            >
+              対象館:
+            </label>
+            <select
+              id="annual-scope-select"
+              class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-alps-950 focus:border-alps-500 focus:outline-none"
+            >
+              <option value="all">全市合計（11館＋2SP）</option>
+              {dataset.branchProfiles.map((b) => (
+                <option value={b.id}>
+                  {b.name}
+                  {b.formerName ? `（${b.formerName}）` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div
+          id="annual-view-row"
+          class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-3"
+        >
+          <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="表示形式">
+            <button
+              type="button"
+              data-annual-view="total"
+              aria-pressed="true"
+              class="rounded-full bg-alps-900 px-3 py-1 text-xs font-semibold text-white transition"
+            >
+              推移グラフ（総数）
+            </button>
+            <button
+              type="button"
+              data-annual-view="children_split"
+              aria-pressed="false"
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+            >
+              一般 vs 児童（積み上げ棒）
+            </button>
+          </div>
+          <p id="annual-chart-caption" class="text-[11px] text-slate-600" />
+        </div>
+      </div>
+
+      <!-- Main Chart + Selected Year Detail -->
+      <div class="mt-4 grid gap-5 lg:grid-cols-12">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-8">
+          <div id="annual-main-chart" />
+          <p class="mt-2 text-[11px] text-slate-500">
+            各年度のポイント（または棒）をクリック／タップすると、右（スマホは下）の詳細パネルに前年比・児童比率・主な出来事が表示されます。
+          </p>
+        </div>
+
+        <div class="lg:col-span-4">
+          <div
+            id="annual-detail-panel"
+            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Age Group Demographics -->
+    <section
+      aria-labelledby="age-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="font-mono text-[11px] font-semibold tracking-wider text-alps-700 uppercase">
+            Age Demographics (0–71+)
+          </p>
+          <h2
+            id="age-heading"
+            class="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl"
+          >
+            利用者の年齢・年代別グラフ（0歳〜71歳以上・11区分）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            年齢階層ごとの登録率（対人口）・実利用率（当該年度に実際に貸出等の利用があった人の割合）・登録者数（館別対応）を比較できます。
+          </p>
+        </div>
+        <span class="rounded-full bg-alps-50 px-3 py-1 text-xs font-semibold text-alps-900 ring-1 ring-alps-200">
+          最新：{latestAgeSnapshot.eraLabel}（{latestAgeSnapshot.asOf}）
+        </span>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <div class="flex flex-wrap gap-1.5" role="group" aria-label="年齢別指標切替">
+          <button
+            type="button"
+            data-age-metric="regRate"
+            aria-pressed="true"
+            class="rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+          >
+            登録率（対人口 %）
+          </button>
+          <button
+            type="button"
+            data-age-metric="activeRatePop"
+            aria-pressed="false"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            実利用率（対人口 %）
+          </button>
+          <button
+            type="button"
+            data-age-metric="activeRateReg"
+            aria-pressed="false"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            実利用率（対登録者 %）
+          </button>
+          <button
+            type="button"
+            data-age-metric="registeredCount"
+            aria-pressed="false"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+          >
+            登録者数（人）
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="inline-flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-700">
+            <input
+              id="age-compare-toggle"
+              type="checkbox"
+              checked
+              class="h-4 w-4 rounded border-slate-300 text-alps-900 focus:ring-alps-500"
+            />
+            令和5年度（2023）と比較
+          </label>
+
+          <div id="age-branch-wrap" class="flex items-center gap-1.5">
+            <label for="age-branch-select" class="text-xs font-semibold text-slate-700">
+              館別:
+            </label>
+            <select
+              id="age-branch-select"
+              class="rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-alps-950 focus:border-alps-500 focus:outline-none"
+            >
+              <option value="all">全館合計（市内＋市外）</option>
+              {dataset.branchProfiles.map((b) => (
+                <option value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 grid gap-5 lg:grid-cols-12">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-8">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p id="age-chart-subtitle" class="text-xs font-semibold text-slate-700" />
+            <div class="flex items-center gap-3 text-[11px] text-slate-600">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="inline-block h-2.5 w-2.5 rounded-sm bg-alps-700" />
+                令和6年度（2024）
+              </span>
+              <span
+                id="age-legend-r5"
+                class="inline-flex items-center gap-1.5"
+              >
+                <span class="inline-block h-2.5 w-2.5 rounded-sm bg-slate-300" />
+                令和5年度（2023）
+              </span>
+            </div>
+          </div>
+          <div id="age-chart-wrap" class="mt-3" />
+        </div>
+
+        <div class="space-y-4 lg:col-span-4">
+          <div
+            id="age-detail-panel"
+            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+          />
+
+          <!-- Digital Library Mini Card -->
+          <div class="rounded-2xl border border-alps-200 bg-alps-50/60 p-4">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-sm font-bold text-alps-950">
+                電子図書館「デジとしょ信州」
+              </h3>
+              <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-alps-800 ring-1 ring-alps-200">
+                R4〜R6年度
+              </span>
+            </div>
+            <p class="mt-1 text-[11px] leading-relaxed text-slate-600">
+              令和4年8月に参加開始した県・市町村協働の電子図書館。登録者・貸出ともに急伸しています。
+            </p>
+            <div class="mt-3 space-y-2">
+              {dataset.digitalLibrary.map((dl) => {
+                const widthPct = Math.round((dl.loansCount / 8000) * 100);
+                return (
+                  <div class="rounded-xl bg-white p-2.5 ring-1 ring-slate-200/80">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="font-bold text-slate-800">{dl.eraLabel}</span>
+                      <span class="font-mono text-[11px] text-slate-600">
+                        登録 {dl.registeredUsers.toLocaleString("ja-JP")}人 / 貸出{" "}
+                        <strong class="text-alps-900">
+                          {dl.loansCount.toLocaleString("ja-JP")}冊
+                        </strong>
+                      </span>
+                    </div>
+                    <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        class="h-full rounded-full bg-alps-700"
+                        style={`width: ${widthPct}%`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Branch Comparison (11 Libraries + 2 SPs) -->
+    <section
+      aria-labelledby="branch-heading"
+      class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="font-mono text-[11px] font-semibold tracking-wider text-alps-700 uppercase">
+            Branch Comparison (11 Libraries + 2 Service Points)
+          </p>
+          <h2
+            id="branch-heading"
+            class="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl"
+          >
+            館別の比較（全11館＋サービスポイント）
+          </h2>
+          <p class="mt-1 text-xs text-slate-600">
+            各館の貸出規模・蔵書・登録者・児童貸出比率・蔵書回転率を比較できます。館をクリックすると詳細プロフィールを表示します。
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <label
+            for="branch-year-select"
+            class="text-xs font-semibold text-slate-700"
+          >
+            表示年度:
+          </label>
+          <select
+            id="branch-year-select"
+            class="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-alps-950 focus:border-alps-500 focus:outline-none"
+          >
+            {[...dataset.annualRecords].reverse().map((r) => (
+              <option value={String(r.fiscalYear)}>
+                {r.fiscalYear}年度（{r.eraLabel}）
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-1.5" role="group" aria-label="館別比較指標">
+        <button
+          type="button"
+          data-branch-metric="loansTotal"
+          aria-pressed="true"
+          class="rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition"
+        >
+          個人貸出冊数
+        </button>
+        <button
+          type="button"
+          data-branch-metric="holdingsDisplay"
+          aria-pressed="false"
+          class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+        >
+          蔵書数
+        </button>
+        <button
+          type="button"
+          data-branch-metric="registeredTotal"
+          aria-pressed="false"
+          class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+        >
+          登録者数
+        </button>
+        <button
+          type="button"
+          data-branch-metric="childrenLoanShare"
+          aria-pressed="false"
+          class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+        >
+          児童貸出比率（%）
+        </button>
+        <button
+          type="button"
+          data-branch-metric="turnoverRate"
+          aria-pressed="false"
+          class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900"
+        >
+          蔵書回転率（貸出÷蔵書）
+        </button>
+      </div>
+
+      <div class="mt-4 grid gap-5 lg:grid-cols-12">
+        <div class="space-y-2 lg:col-span-7" id="branch-ranking-list" />
+        <div class="space-y-4 lg:col-span-5">
+          <div
+            id="branch-profile-panel"
+            class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5"
+          />
+          <div
+            id="service-points-panel"
+            class="hidden rounded-2xl border border-sky-200 bg-sky-50/60 p-4 text-xs text-sky-950"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Collapsible Annual Data Table -->
+    <section
+      aria-labelledby="table-heading"
+      class="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 sm:p-6"
+    >
+      <details class="group">
+        <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 id="table-heading" class="text-base font-bold text-slate-900 sm:text-lg">
+              年次統計データ一覧表（平成25年度〜令和7年度）
+            </h2>
+            <p class="mt-0.5 text-xs text-slate-600">
+              クリックして全13年度の数値一覧（蔵書数・登録者数・貸出冊数・予約・相談・人口）を展開します。
+            </p>
+          </div>
+          <span class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-alps-900 transition group-open:bg-alps-900 group-open:text-white">
+            表を開く / 閉じる
+          </span>
+        </summary>
+
+        <div class="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table class="min-w-full border-collapse text-right text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-700">
+                <th class="px-3 py-2.5 text-left">年度</th>
+                <th class="px-3 py-2.5">蔵書数(全資料)</th>
+                <th class="px-3 py-2.5">蔵書数(図書)</th>
+                <th class="px-3 py-2.5">登録者数</th>
+                <th class="px-3 py-2.5">うち児童</th>
+                <th class="px-3 py-2.5">個人貸出冊数</th>
+                <th class="px-3 py-2.5">うち児童</th>
+                <th class="px-3 py-2.5">団体貸出</th>
+                <th class="px-3 py-2.5">予約冊数</th>
+                <th class="px-3 py-2.5">調査相談</th>
+                <th class="px-3 py-2.5">奉仕人口</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-mono">
+              {dataset.annualRecords.map((rec) => (
+                <tr class={rec.registrationPolicyChange ? "bg-amber-50/60" : "hover:bg-slate-50/70"}>
+                  <td class="whitespace-nowrap px-3 py-2 text-left font-sans font-semibold text-slate-900">
+                    {rec.fiscalYear}（{rec.shortEraLabel}）
+                    {rec.registrationPolicyChange && (
+                      <span class="ml-1 rounded bg-amber-200 px-1 py-0.5 text-[10px] font-bold text-amber-950">
+                        基準変更
+                      </span>
+                    )}
+                  </td>
+                  <td class="px-3 py-2 text-slate-800">
+                    {rec.holdingsTotal !== null
+                      ? rec.holdingsTotal.toLocaleString("ja-JP")
+                      : "未公表"}
+                  </td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {rec.holdingsBooks !== null
+                      ? rec.holdingsBooks.toLocaleString("ja-JP")
+                      : "-"}
+                  </td>
+                  <td class="px-3 py-2 font-semibold text-slate-900">
+                    {rec.registeredTotal.toLocaleString("ja-JP")}
+                  </td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {rec.registeredChildren.toLocaleString("ja-JP")}
+                  </td>
+                  <td class="px-3 py-2 font-semibold text-alps-900">
+                    {rec.loansTotal.toLocaleString("ja-JP")}
+                  </td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {rec.loansChildren.toLocaleString("ja-JP")}
+                  </td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {rec.groupLoansTotal.toLocaleString("ja-JP")}
+                  </td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {rec.reservationsTotal !== null
+                      ? rec.reservationsTotal.toLocaleString("ja-JP")
+                      : "-"}
+                  </td>
+                  <td class="px-3 py-2 text-slate-600">
+                    {rec.referenceCount !== null
+                      ? rec.referenceCount.toLocaleString("ja-JP")
+                      : "-"}
+                  </td>
+                  <td class="px-3 py-2 text-slate-500">
+                    {rec.population.toLocaleString("ja-JP")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <script
+    id="library-usage-data"
+    type="application/json"
+    set:html={embeddedJson}
+  />
+
+  <script>
+    import {
+      type BranchMetricKey,
+      calcGrowthMultiple,
+      calcPerCapita,
+      calcSharePercent,
+      calcYoYPercent,
+      formatAxisValue,
+      formatJaCount,
+      getBranchMetricValue,
+      getCombinedTimelinePoints,
+      getScopeYearValues,
+    } from "@/lib/library-usage-metrics";
+    import type {
+      BranchId,
+      LibraryUsageDataset,
+    } from "@/lib/library-usage-schema";
+
+    const dataScript = document.getElementById("library-usage-data");
+    if (!dataScript?.textContent) {
+      throw new Error("Missing embedded library usage data");
+    }
+    const dataset: LibraryUsageDataset = JSON.parse(dataScript.textContent);
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+
+    function el<K extends keyof HTMLElementTagNameMap>(
+      tag: K,
+      className?: string,
+      text?: string,
+    ): HTMLElementTagNameMap[K] {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function svgEl<K extends keyof SVGElementTagNameMap>(
+      tag: K,
+      attrs: Record<string, string | number> = {},
+      text?: string,
+    ): SVGElementTagNameMap[K] {
+      const node = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        node.setAttribute(k, String(v));
+      }
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function clearNode(node: Element | null): void {
+      if (!node) return;
+      while (node.firstChild) {
+        node.removeChild(node.firstChild);
+      }
+    }
+
+    function formatSignedDelta(pct: number | null): string {
+      if (pct === null) return "-";
+      const sign = pct > 0 ? "+" : "";
+      return `${sign}${pct.toFixed(1)}%`;
+    }
+
+    function niceMax(rawMax: number, minFloor = 10): number {
+      if (rawMax <= 0) return minFloor;
+      const exp = Math.floor(Math.log10(rawMax));
+      const base = 10 ** exp;
+      const frac = rawMax / base;
+      let niceFrac = 10;
+      if (frac <= 1.0) niceFrac = 1.0;
+      else if (frac <= 1.2) niceFrac = 1.2;
+      else if (frac <= 1.5) niceFrac = 1.5;
+      else if (frac <= 2.0) niceFrac = 2.0;
+      else if (frac <= 2.5) niceFrac = 2.5;
+      else if (frac <= 3.0) niceFrac = 3.0;
+      else if (frac <= 4.0) niceFrac = 4.0;
+      else if (frac <= 5.0) niceFrac = 5.0;
+      else if (frac <= 6.0) niceFrac = 6.0;
+      else if (frac <= 8.0) niceFrac = 8.0;
+      return niceFrac * base;
+    }
+
+    function setToggleGroup(
+      buttons: HTMLButtonElement[],
+      activeAttr: string,
+      activeVal: string,
+      activeCls: string,
+      inactiveCls: string,
+    ): void {
+      for (const btn of buttons) {
+        const val = btn.getAttribute(activeAttr);
+        const active = val === activeVal;
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.className = active ? activeCls : inactiveCls;
+      }
+    }
+
+    const profileMap = new Map(dataset.branchProfiles.map((b) => [b.id, b]));
+    const annualByYear = new Map(
+      dataset.annualRecords.map((r) => [r.fiscalYear, r]),
+    );
+    const latestAnnual =
+      dataset.annualRecords[dataset.annualRecords.length - 1];
+    const combinedPoints = getCombinedTimelinePoints(dataset);
+
+    // =========================================================================
+    // SECTION 1: Long-Term Era Trends
+    // =========================================================================
+    let decadeTab: "combined" | "expansion" = "combined";
+    let decadeScale: "actual" | "index" = "actual";
+    let selectedCombinedYear = 2025;
+    let selectedExpansionYear = 2024;
+
+    const decadeTabButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-decade-tab]"),
+    );
+    const decadeScaleButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-decade-scale]"),
+    );
+    const decadeScaleGroup = document.getElementById("decade-scale-group");
+    const decadeCombinedPanel = document.getElementById(
+      "decade-combined-panel",
+    );
+    const decadeExpansionPanel = document.getElementById(
+      "decade-expansion-panel",
+    );
+    const decadeBooksLoansChart = document.getElementById(
+      "decade-books-loans-chart",
+    );
+    const decadeRegisteredChart = document.getElementById(
+      "decade-registered-chart",
+    );
+    const decadeSelectedCard = document.getElementById("decade-selected-card");
+    const expansionChartWrap = document.getElementById("expansion-chart-wrap");
+    const expansionDetailPanel = document.getElementById(
+      "expansion-detail-panel",
+    );
+
+    function renderCombinedCharts(): void {
+      if (
+        !decadeBooksLoansChart ||
+        !decadeRegisteredChart ||
+        !decadeSelectedCard
+      ) {
+        return;
+      }
+      clearNode(decadeBooksLoansChart);
+      clearNode(decadeRegisteredChart);
+      clearNode(decadeSelectedCard);
+
+      const base1980 = combinedPoints[0];
+      const isIndex = decadeScale === "index";
+
+      // --- Chart 1: Holdings & Loans ---
+      const w1 = 490;
+      const h1 = 260;
+      const pad1 = { top: 20, right: 16, bottom: 44, left: 50 };
+      const cw1 = w1 - pad1.left - pad1.right;
+      const ch1 = h1 - pad1.top - pad1.bottom;
+
+      const holdingsVals = combinedPoints.map((p) => {
+        const val = p.holdingsTotal ?? p.holdingsBooks ?? 0;
+        return isIndex
+          ? (val / (base1980.holdingsTotal ?? 1)) * 100
+          : val;
+      });
+      const loansVals = combinedPoints.map((p) =>
+        isIndex ? (p.loansTotal / base1980.loansTotal) * 100 : p.loansTotal,
+      );
+      const max1 = niceMax(Math.max(...holdingsVals, ...loansVals) * 1.06);
+
+      const svg1 = svgEl("svg", {
+        viewBox: `0 0 ${w1} ${h1}`,
+        class: "w-full h-auto overflow-visible",
+        role: "img",
+        "aria-label": "蔵書数と個人貸出冊数の年代別推移グラフ",
+      });
+
+      const ticks = 4;
+      for (let i = 0; i <= ticks; i++) {
+        const v = (max1 / ticks) * i;
+        const y = pad1.top + ch1 - (v / max1) * ch1;
+        svg1.appendChild(
+          svgEl("line", {
+            x1: pad1.left,
+            y1: y,
+            x2: w1 - pad1.right,
+            y2: y,
+            stroke: i === 0 ? "#94a3b8" : "#e2e8f0",
+            "stroke-width": i === 0 ? 1.2 : 1,
+          }),
+        );
+        svg1.appendChild(
+          svgEl(
+            "text",
+            {
+              x: pad1.left - 6,
+              y: y + 3,
+              "text-anchor": "end",
+              class: "fill-slate-500 text-[10px] font-mono",
+            },
+            isIndex ? `${Math.round(v)}` : formatAxisValue(v, "冊"),
+          ),
+        );
+      }
+
+      const step1 = cw1 / combinedPoints.length;
+      const barW = Math.min(24, step1 * 0.48);
+
+      const loanPathCoords: string[] = [];
+      combinedPoints.forEach((pt, idx) => {
+        const cx = pad1.left + step1 * (idx + 0.5);
+        const hVal = holdingsVals[idx];
+        const barH = (hVal / max1) * ch1;
+        const barY = pad1.top + ch1 - barH;
+        const isR7BooksOnly = pt.holdingsTotal === null;
+        const isSelected = pt.fiscalYear === selectedCombinedYear;
+
+        const rect = svgEl("rect", {
+          x: cx - barW / 2,
+          y: barY,
+          width: barW,
+          height: Math.max(2, barH),
+          rx: 3,
+          fill: isR7BooksOnly
+            ? "#9ebbd6"
+            : isSelected
+              ? "#244666"
+              : "#3b6b94",
+          stroke: isR7BooksOnly ? "#1b344d" : isSelected ? "#0c1724" : "none",
+          "stroke-dasharray": isR7BooksOnly ? "3 2" : "none",
+          "stroke-width": isR7BooksOnly || isSelected ? 1.5 : 0,
+          class: "cursor-pointer transition-opacity hover:opacity-85",
+        });
+        rect.addEventListener("click", () => {
+          selectedCombinedYear = pt.fiscalYear;
+          renderCombinedCharts();
+        });
+        svg1.appendChild(rect);
+
+        const lVal = loansVals[idx];
+        const ly = pad1.top + ch1 - (lVal / max1) * ch1;
+        loanPathCoords.push(`${idx === 0 ? "M" : "L"}${cx.toFixed(1)},${ly.toFixed(1)}`);
+
+        svg1.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h1 - 24,
+              "text-anchor": "middle",
+              class: isSelected
+                ? "fill-alps-950 text-[10px] font-bold"
+                : "fill-slate-700 text-[10px]",
+            },
+            pt.shortEraLabel,
+          ),
+        );
+        svg1.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h1 - 12,
+              "text-anchor": "middle",
+              class: "fill-slate-400 text-[9px] font-mono",
+            },
+            String(pt.fiscalYear),
+          ),
+        );
+      });
+
+      svg1.appendChild(
+        svgEl("path", {
+          d: loanPathCoords.join(" "),
+          fill: "none",
+          stroke: "#059669",
+          "stroke-width": 2.5,
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round",
+        }),
+      );
+
+      combinedPoints.forEach((pt, idx) => {
+        const cx = pad1.left + step1 * (idx + 0.5);
+        const ly = pad1.top + ch1 - (loansVals[idx] / max1) * ch1;
+        const isSelected = pt.fiscalYear === selectedCombinedYear;
+
+        const dot = svgEl("circle", {
+          cx,
+          cy: ly,
+          r: isSelected ? 5.5 : 4,
+          fill: isSelected ? "#047857" : "#ffffff",
+          stroke: "#059669",
+          "stroke-width": 2.2,
+          class: "cursor-pointer",
+        });
+        dot.addEventListener("click", () => {
+          selectedCombinedYear = pt.fiscalYear;
+          renderCombinedCharts();
+        });
+        svg1.appendChild(dot);
+
+        const hit = svgEl("rect", {
+          x: pad1.left + step1 * idx,
+          y: pad1.top,
+          width: step1,
+          height: ch1 + 30,
+          fill: "transparent",
+          class: "cursor-pointer",
+        });
+        hit.setAttribute("tabindex", "0");
+        hit.setAttribute(
+          "aria-label",
+          `${pt.eraLabel}（${pt.fiscalYear}年度）を選択`,
+        );
+        hit.addEventListener("click", () => {
+          selectedCombinedYear = pt.fiscalYear;
+          renderCombinedCharts();
+        });
+        hit.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            selectedCombinedYear = pt.fiscalYear;
+            renderCombinedCharts();
+          }
+        });
+        svg1.appendChild(hit);
+      });
+
+      decadeBooksLoansChart.appendChild(svg1);
+
+      // --- Chart 2: Registered Users (broken at 2019 -> 2020) ---
+      const w2 = 360;
+      const h2 = 260;
+      const pad2 = { top: 20, right: 14, bottom: 44, left: 46 };
+      const cw2 = w2 - pad2.left - pad2.right;
+      const ch2 = h2 - pad2.top - pad2.bottom;
+
+      const regVals = combinedPoints.map((p) =>
+        isIndex
+          ? (p.registeredTotal / base1980.registeredTotal) * 100
+          : p.registeredTotal,
+      );
+      const max2 = niceMax(Math.max(...regVals) * 1.1);
+
+      const svg2 = svgEl("svg", {
+        viewBox: `0 0 ${w2} ${h2}`,
+        class: "w-full h-auto overflow-visible",
+        role: "img",
+        "aria-label": "登録者数の年代別推移グラフ（2020年度削除基準変更を破線表示）",
+      });
+
+      for (let i = 0; i <= ticks; i++) {
+        const v = (max2 / ticks) * i;
+        const y = pad2.top + ch2 - (v / max2) * ch2;
+        svg2.appendChild(
+          svgEl("line", {
+            x1: pad2.left,
+            y1: y,
+            x2: w2 - pad2.right,
+            y2: y,
+            stroke: i === 0 ? "#94a3b8" : "#e2e8f0",
+            "stroke-width": i === 0 ? 1.2 : 1,
+          }),
+        );
+        svg2.appendChild(
+          svgEl(
+            "text",
+            {
+              x: pad2.left - 5,
+              y: y + 3,
+              "text-anchor": "end",
+              class: "fill-slate-500 text-[10px] font-mono",
+            },
+            isIndex ? `${Math.round(v)}` : formatAxisValue(v, "人"),
+          ),
+        );
+      }
+
+      const step2 = cw2 / combinedPoints.length;
+      const coords2 = combinedPoints.map((pt, idx) => ({
+        pt,
+        x: pad2.left + step2 * (idx + 0.5),
+        y: pad2.top + ch2 - (regVals[idx] / max2) * ch2,
+      }));
+
+      // Policy change vertical divider before 2020
+      const idx2020 = combinedPoints.findIndex((p) => p.fiscalYear === 2020);
+      if (idx2020 > 0) {
+        const divX = (coords2[idx2020 - 1].x + coords2[idx2020].x) / 2;
+        svg2.appendChild(
+          svgEl("line", {
+            x1: divX,
+            y1: pad2.top,
+            x2: divX,
+            y2: pad2.top + ch2,
+            stroke: "#d97706",
+            "stroke-dasharray": "4 3",
+            "stroke-width": 1.4,
+          }),
+        );
+        svg2.appendChild(
+          svgEl(
+            "text",
+            {
+              x: divX,
+              y: pad2.top + 10,
+              "text-anchor": "middle",
+              class: "fill-amber-700 text-[9px] font-bold",
+            },
+            "基準変更",
+          ),
+        );
+      }
+
+      const preBreak = coords2
+        .filter((c) => c.pt.fiscalYear <= 2019)
+        .map((c, i) => `${i === 0 ? "M" : "L"}${c.x.toFixed(1)},${c.y.toFixed(1)}`)
+        .join(" ");
+      const postBreak = coords2
+        .filter((c) => c.pt.fiscalYear >= 2020)
+        .map((c, i) => `${i === 0 ? "M" : "L"}${c.x.toFixed(1)},${c.y.toFixed(1)}`)
+        .join(" ");
+
+      if (preBreak) {
+        svg2.appendChild(
+          svgEl("path", {
+            d: preBreak,
+            fill: "none",
+            stroke: "#0284c7",
+            "stroke-width": 2.4,
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+          }),
+        );
+      }
+      if (idx2020 > 0) {
+        svg2.appendChild(
+          svgEl("line", {
+            x1: coords2[idx2020 - 1].x,
+            y1: coords2[idx2020 - 1].y,
+            x2: coords2[idx2020].x,
+            y2: coords2[idx2020].y,
+            stroke: "#d97706",
+            "stroke-width": 1.8,
+            "stroke-dasharray": "4 4",
+          }),
+        );
+      }
+      if (postBreak) {
+        svg2.appendChild(
+          svgEl("path", {
+            d: postBreak,
+            fill: "none",
+            stroke: "#0284c7",
+            "stroke-width": 2.4,
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+          }),
+        );
+      }
+
+      coords2.forEach(({ pt, x, y }) => {
+        const isSelected = pt.fiscalYear === selectedCombinedYear;
+        const dot = svgEl("circle", {
+          cx: x,
+          cy: y,
+          r: isSelected ? 5.5 : 3.8,
+          fill: pt.registrationPolicyChange
+            ? "#f59e0b"
+            : isSelected
+              ? "#0369a1"
+              : "#ffffff",
+          stroke: pt.registrationPolicyChange ? "#b45309" : "#0284c7",
+          "stroke-width": 2,
+          class: "cursor-pointer",
+        });
+        dot.addEventListener("click", () => {
+          selectedCombinedYear = pt.fiscalYear;
+          renderCombinedCharts();
+        });
+        svg2.appendChild(dot);
+
+        svg2.appendChild(
+          svgEl(
+            "text",
+            {
+              x,
+              y: h2 - 24,
+              "text-anchor": "middle",
+              class: isSelected
+                ? "fill-alps-950 text-[9.5px] font-bold"
+                : "fill-slate-700 text-[9.5px]",
+            },
+            pt.shortEraLabel,
+          ),
+        );
+        svg2.appendChild(
+          svgEl(
+            "text",
+            {
+              x,
+              y: h2 - 12,
+              "text-anchor": "middle",
+              class: "fill-slate-400 text-[8.5px] font-mono",
+            },
+            String(pt.fiscalYear).slice(2),
+          ),
+        );
+
+        const hit = svgEl("rect", {
+          x: x - step2 / 2,
+          y: pad2.top,
+          width: step2,
+          height: ch2 + 30,
+          fill: "transparent",
+          class: "cursor-pointer",
+        });
+        hit.addEventListener("click", () => {
+          selectedCombinedYear = pt.fiscalYear;
+          renderCombinedCharts();
+        });
+        svg2.appendChild(hit);
+      });
+
+      decadeRegisteredChart.appendChild(svg2);
+
+      // Selected Decade Summary Card
+      const sel =
+        combinedPoints.find((p) => p.fiscalYear === selectedCombinedYear) ??
+        combinedPoints[combinedPoints.length - 1];
+      const holdingsMult = calcGrowthMultiple(
+        sel.holdingsTotal ?? sel.holdingsBooks,
+        base1980.holdingsTotal,
+      );
+      const loansMult = calcGrowthMultiple(
+        sel.loansTotal,
+        base1980.loansTotal,
+      );
+      const regMult = calcGrowthMultiple(
+        sel.registeredTotal,
+        base1980.registeredTotal,
+      );
+
+      const headerRow = el(
+        "div",
+        "flex flex-wrap items-center justify-between gap-2",
+      );
+      headerRow.appendChild(
+        el(
+          "h4",
+          "text-sm font-bold text-alps-950",
+          `${sel.eraLabel}（${sel.fiscalYear}年度）の年代ポジション`,
+        ),
+      );
+      headerRow.appendChild(
+        el(
+          "span",
+          "rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-alps-800 ring-1 ring-alps-200",
+          sel.fiscalYear === 2025
+            ? "蔵書は図書のみ参考値（R7）"
+            : sel.fiscalYear >= 2020
+              ? "登録者は削除基準見直し後"
+              : "1980年度基準との比較",
+        ),
+      );
+      decadeSelectedCard.appendChild(headerRow);
+
+      const grid = el("div", "mt-3 grid gap-3 sm:grid-cols-3");
+      const cards: Array<[string, string, string]> = [
+        [
+          sel.holdingsTotal !== null ? "蔵書数（全資料）" : "蔵書数（図書のみ参考）",
+          formatJaCount(sel.holdingsTotal ?? sel.holdingsBooks ?? 0, "冊"),
+          holdingsMult ? `1980年比 ${holdingsMult.toFixed(1)}倍` : "-",
+        ],
+        [
+          "個人貸出冊数",
+          formatJaCount(sel.loansTotal, "冊"),
+          loansMult ? `1980年比 ${loansMult.toFixed(1)}倍` : "-",
+        ],
+        [
+          "登録者数",
+          `${sel.registeredTotal.toLocaleString("ja-JP")}人`,
+          sel.fiscalYear >= 2020
+            ? "※R2より2年未更新削除へ変更"
+            : regMult
+              ? `1980年比 ${regMult.toFixed(1)}倍`
+              : "-",
+        ],
+      ];
+      for (const [label, val, sub] of cards) {
+        const card = el(
+          "div",
+          "rounded-xl bg-white px-3.5 py-2.5 ring-1 ring-alps-200/80",
+        );
+        card.appendChild(el("p", "text-[11px] text-slate-500", label));
+        card.appendChild(el("p", "mt-0.5 text-base font-bold text-slate-900", val));
+        card.appendChild(el("p", "mt-0.5 text-[11px] text-alps-800", sub));
+        grid.appendChild(card);
+      }
+      decadeSelectedCard.appendChild(grid);
+      decadeSelectedCard.appendChild(
+        el("p", "mt-2.5 text-xs leading-relaxed text-slate-700", sel.note),
+      );
+    }
+
+    function renderExpansionView(): void {
+      if (!expansionChartWrap || !expansionDetailPanel) return;
+      clearNode(expansionChartWrap);
+      clearNode(expansionDetailPanel);
+
+      const pts = dataset.branchExpansionHistory;
+      const w = 640;
+      const h = 290;
+      const pad = { top: 22, right: 44, bottom: 44, left: 52 };
+      const cw = w - pad.left - pad.right;
+      const ch = h - pad.top - pad.bottom;
+
+      const maxVol = niceMax(
+        Math.max(...pts.map((p) => Math.max(p.holdingsTotal, p.loansTotal))) *
+          1.06,
+      );
+      const maxLibs = 14;
+
+      const svg = svgEl("svg", {
+        viewBox: `0 0 ${w} ${h}`,
+        class: "w-full h-auto overflow-visible",
+        role: "img",
+        "aria-label": "分館整備の歴史と蔵書数・貸出冊数の推移グラフ",
+      });
+
+      for (let i = 0; i <= 4; i++) {
+        const v = (maxVol / 4) * i;
+        const y = pad.top + ch - (v / maxVol) * ch;
+        svg.appendChild(
+          svgEl("line", {
+            x1: pad.left,
+            y1: y,
+            x2: w - pad.right,
+            y2: y,
+            stroke: i === 0 ? "#94a3b8" : "#e2e8f0",
+            "stroke-width": i === 0 ? 1.2 : 1,
+          }),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: pad.left - 6,
+              y: y + 3,
+              "text-anchor": "end",
+              class: "fill-slate-500 text-[10px] font-mono",
+            },
+            formatAxisValue(v, "冊"),
+          ),
+        );
+      }
+
+      for (const libTick of [2, 6, 10, 13]) {
+        const y = pad.top + ch - (libTick / maxLibs) * ch;
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: w - pad.right + 6,
+              y: y + 3,
+              "text-anchor": "start",
+              class: "fill-amber-700 text-[10px] font-mono",
+            },
+            `${libTick}館`,
+          ),
+        );
+      }
+
+      const step = cw / pts.length;
+      const barW = Math.min(22, step * 0.52);
+      const loanCoords: string[] = [];
+      const libCoords: string[] = [];
+
+      pts.forEach((pt, idx) => {
+        const cx = pad.left + step * (idx + 0.5);
+        const holdH = (pt.holdingsTotal / maxVol) * ch;
+        const isSel = pt.fiscalYear === selectedExpansionYear;
+
+        const bar = svgEl("rect", {
+          x: cx - barW / 2,
+          y: pad.top + ch - holdH,
+          width: barW,
+          height: Math.max(2, holdH),
+          rx: 3,
+          fill: isSel ? "#3b6b94" : "#cbdbe9",
+          class: "cursor-pointer",
+        });
+        bar.addEventListener("click", () => {
+          selectedExpansionYear = pt.fiscalYear;
+          renderExpansionView();
+        });
+        svg.appendChild(bar);
+
+        const ly = pad.top + ch - (pt.loansTotal / maxVol) * ch;
+        loanCoords.push(`${idx === 0 ? "M" : "L"}${cx.toFixed(1)},${ly.toFixed(1)}`);
+
+        const totalFacilities = pt.librariesCount + pt.servicePointsCount;
+        const libY = pad.top + ch - (totalFacilities / maxLibs) * ch;
+        libCoords.push(`${idx === 0 ? "M" : "L"}${cx.toFixed(1)},${libY.toFixed(1)}`);
+
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h - 24,
+              "text-anchor": "middle",
+              class: isSel
+                ? "fill-alps-950 text-[10px] font-bold"
+                : "fill-slate-700 text-[10px]",
+            },
+            pt.shortEraLabel,
+          ),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h - 12,
+              "text-anchor": "middle",
+              class: "fill-slate-400 text-[8.5px] font-mono",
+            },
+            String(pt.fiscalYear),
+          ),
+        );
+      });
+
+      svg.appendChild(
+        svgEl("path", {
+          d: libCoords.join(" "),
+          fill: "none",
+          stroke: "#d97706",
+          "stroke-width": 2,
+          "stroke-dasharray": "4 3",
+        }),
+      );
+
+      svg.appendChild(
+        svgEl("path", {
+          d: loanCoords.join(" "),
+          fill: "none",
+          stroke: "#0c1724",
+          "stroke-width": 2.4,
+          "stroke-linecap": "round",
+          "stroke-linejoin": "round",
+        }),
+      );
+
+      pts.forEach((pt, idx) => {
+        const cx = pad.left + step * (idx + 0.5);
+        const ly = pad.top + ch - (pt.loansTotal / maxVol) * ch;
+        const isSel = pt.fiscalYear === selectedExpansionYear;
+        const dot = svgEl("circle", {
+          cx,
+          cy: ly,
+          r: isSel ? 5.5 : 3.8,
+          fill: isSel ? "#0c1724" : "#ffffff",
+          stroke: "#0c1724",
+          "stroke-width": 2,
+          class: "cursor-pointer",
+        });
+        dot.addEventListener("click", () => {
+          selectedExpansionYear = pt.fiscalYear;
+          renderExpansionView();
+        });
+        svg.appendChild(dot);
+
+        const hit = svgEl("rect", {
+          x: pad.left + step * idx,
+          y: pad.top,
+          width: step,
+          height: ch + 30,
+          fill: "transparent",
+          class: "cursor-pointer",
+        });
+        hit.addEventListener("click", () => {
+          selectedExpansionYear = pt.fiscalYear;
+          renderExpansionView();
+        });
+        svg.appendChild(hit);
+      });
+
+      expansionChartWrap.appendChild(svg);
+
+      const sel =
+        pts.find((p) => p.fiscalYear === selectedExpansionYear) ??
+        pts[pts.length - 1];
+      expansionDetailPanel.appendChild(
+        el(
+          "p",
+          "font-mono text-[11px] font-semibold text-alps-700",
+          `${sel.fiscalYear}年度（${sel.eraLabel}）`,
+        ),
+      );
+      expansionDetailPanel.appendChild(
+        el(
+          "h4",
+          "mt-1 text-base font-bold text-slate-900",
+          `本館1＋分館${sel.librariesCount - 1}${sel.servicePointsCount > 0 ? `＋${sel.servicePointsCount}SP` : ""}`,
+        ),
+      );
+      const list = el("dl", "mt-3 space-y-2 text-xs");
+      for (const [k, v] of [
+        ["蔵書冊数", `${sel.holdingsTotal.toLocaleString("ja-JP")}冊`],
+        ["個人貸出冊数", `${sel.loansTotal.toLocaleString("ja-JP")}冊`],
+        [
+          "1館平均貸出",
+          `${Math.round(sel.loansTotal / sel.librariesCount).toLocaleString("ja-JP")}冊/館`,
+        ],
+      ]) {
+        const row = el(
+          "div",
+          "flex items-center justify-between rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200/80",
+        );
+        row.appendChild(el("dt", "text-slate-500", k));
+        row.appendChild(el("dd", "font-mono font-bold text-slate-900", v));
+        list.appendChild(row);
+      }
+      expansionDetailPanel.appendChild(list);
+      expansionDetailPanel.appendChild(
+        el("p", "mt-3 text-xs leading-relaxed text-slate-700", sel.note),
+      );
+    }
+
+    function updateLongTermSection(): void {
+      setToggleGroup(
+        decadeTabButtons,
+        "data-decade-tab",
+        decadeTab,
+        "rounded-xl bg-alps-900 px-3 py-2 text-xs font-semibold text-white transition",
+        "rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900",
+      );
+      setToggleGroup(
+        decadeScaleButtons,
+        "data-decade-scale",
+        decadeScale,
+        "rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-alps-900 shadow-xs transition",
+        "rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:text-slate-900",
+      );
+
+      const isCombined = decadeTab === "combined";
+      decadeCombinedPanel?.classList.toggle("hidden", !isCombined);
+      decadeExpansionPanel?.classList.toggle("hidden", isCombined);
+      decadeScaleGroup?.classList.toggle("hidden", !isCombined);
+
+      if (isCombined) {
+        renderCombinedCharts();
+      } else {
+        renderExpansionView();
+      }
+    }
+
+    for (const btn of decadeTabButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.dataset.decadeTab;
+        if (next === "combined" || next === "expansion") {
+          decadeTab = next;
+          updateLongTermSection();
+        }
+      });
+    }
+    for (const btn of decadeScaleButtons) {
+      btn.addEventListener("click", () => {
+        const next = btn.dataset.decadeScale;
+        if (next === "actual" || next === "index") {
+          decadeScale = next;
+          updateLongTermSection();
+        }
+      });
+    }
+
+    // =========================================================================
+    // SECTION 2: 13-Year Annual Trends (FY2013-FY2025)
+    // =========================================================================
+    type AnnualMetric =
+      | "loans"
+      | "holdings"
+      | "registered"
+      | "per_capita"
+      | "services";
+    type AnnualViewMode = "total" | "children_split";
+
+    let annualMetric: AnnualMetric = "loans";
+    let annualScope: "all" | BranchId = "all";
+    let annualViewMode: AnnualViewMode = "total";
+    let selectedAnnualYear = 2025;
+
+    const sparklinesRow = document.getElementById("annual-sparklines-row");
+    const annualMetricButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-annual-metric]"),
+    );
+    const annualViewButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-annual-view]"),
+    );
+    const annualScopeSelect = document.getElementById(
+      "annual-scope-select",
+    ) as HTMLSelectElement | null;
+    const annualViewRow = document.getElementById("annual-view-row");
+    const annualChartCaption = document.getElementById("annual-chart-caption");
+    const annualMainChart = document.getElementById("annual-main-chart");
+    const annualDetailPanel = document.getElementById("annual-detail-panel");
+
+    function renderSparklines(): void {
+      if (!sparklinesRow) return;
+      clearNode(sparklinesRow);
+
+      const cards: Array<{
+        metric: AnnualMetric;
+        title: string;
+        latestText: string;
+        changeText: string;
+        color: string;
+        values: Array<number | null>;
+        breakIdx?: number;
+      }> = [
+        {
+          metric: "holdings",
+          title: "蔵書数（H25〜R6全資料）",
+          latestText: formatJaCount(
+            dataset.annualRecords[11].holdingsTotal ?? 0,
+            "冊",
+          ),
+          changeText: "H25比 +13.1%（R7図書のみ 124.3万冊）",
+          color: "#3b6b94",
+          values: dataset.annualRecords.map((r) => r.holdingsTotal),
+        },
+        {
+          metric: "registered",
+          title: "登録者数（H25〜R7）",
+          latestText: `${latestAnnual.registeredTotal.toLocaleString("ja-JP")}人`,
+          changeText: "R2基準変更後は約4.9〜5.7万人台",
+          color: "#0284c7",
+          values: dataset.annualRecords.map((r) => r.registeredTotal),
+          breakIdx: 7, // 2020 index
+        },
+        {
+          metric: "loans",
+          title: "個人貸出冊数（H25〜R7）",
+          latestText: formatJaCount(latestAnnual.loansTotal, "冊"),
+          changeText: "R6比 +1.1%（近年は150万冊台で推移）",
+          color: "#059669",
+          values: dataset.annualRecords.map((r) => r.loansTotal),
+        },
+      ];
+
+      for (const c of cards) {
+        const active = annualMetric === c.metric;
+        const btn = el(
+          "button",
+          `rounded-2xl border p-3.5 text-left transition ${
+            active
+              ? "border-alps-500 bg-alps-50/70 ring-1 ring-alps-300"
+              : "border-slate-200 bg-white hover:border-alps-300 hover:bg-slate-50"
+          }`,
+        );
+        btn.type = "button";
+        btn.addEventListener("click", () => {
+          annualMetric = c.metric;
+          updateAnnualSection();
+        });
+
+        const top = el("div", "flex items-center justify-between gap-2");
+        top.appendChild(
+          el("span", "text-xs font-bold text-slate-700", c.title),
+        );
+        top.appendChild(
+          el(
+            "span",
+            "text-[10px] font-semibold text-alps-700",
+            active ? "表示中" : "切替 →",
+          ),
+        );
+        btn.appendChild(top);
+        btn.appendChild(
+          el("p", "mt-1 text-lg font-bold text-slate-950", c.latestText),
+        );
+
+        // Mini SVG sparkline
+        const sw = 220;
+        const sh = 38;
+        const valid = c.values.filter((v): v is number => v !== null);
+        const minV = Math.min(...valid) * 0.92;
+        const maxV = Math.max(...valid) * 1.04;
+        const range = Math.max(1, maxV - minV);
+        const svg = svgEl("svg", {
+          viewBox: `0 0 ${sw} ${sh}`,
+          class: "mt-2 h-9 w-full overflow-visible",
+          "aria-hidden": "true",
+        });
+
+        const drawSeg = (from: number, to: number, dashed = false) => {
+          const coords: string[] = [];
+          for (let i = from; i <= to; i++) {
+            const v = c.values[i];
+            if (v === null) continue;
+            const x = 4 + (i / (c.values.length - 1)) * (sw - 8);
+            const y = 4 + (1 - (v - minV) / range) * (sh - 8);
+            coords.push(`${coords.length === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`);
+          }
+          if (coords.length >= 2) {
+            svg.appendChild(
+              svgEl("path", {
+                d: coords.join(" "),
+                fill: "none",
+                stroke: dashed ? "#d97706" : c.color,
+                "stroke-width": dashed ? 1.5 : 2,
+                "stroke-dasharray": dashed ? "3 3" : "none",
+              }),
+            );
+          }
+        };
+
+        if (c.breakIdx !== undefined) {
+          drawSeg(0, c.breakIdx - 1);
+          drawSeg(c.breakIdx - 1, c.breakIdx, true);
+          drawSeg(c.breakIdx, c.values.length - 1);
+        } else {
+          drawSeg(0, c.values.length - 1);
+        }
+
+        btn.appendChild(svg);
+        btn.appendChild(el("p", "mt-1 text-[11px] text-slate-500", c.changeText));
+        sparklinesRow.appendChild(btn);
+      }
+    }
+
+    function renderAnnualMainChart(): void {
+      if (!annualMainChart || !annualChartCaption) return;
+      clearNode(annualMainChart);
+
+      const records = dataset.annualRecords;
+      const scopeName =
+        annualScope === "all"
+          ? "全市合計"
+          : (profileMap.get(annualScope)?.name ?? annualScope);
+
+      const w = 740;
+      const h = 340;
+      const pad = { top: 26, right: 20, bottom: 48, left: 56 };
+      const cw = w - pad.left - pad.right;
+      const ch = h - pad.top - pad.bottom;
+
+      const svg = svgEl("svg", {
+        viewBox: `0 0 ${w} ${h}`,
+        class: "w-full h-auto overflow-visible",
+        role: "img",
+        "aria-label": `${scopeName}の13年間推移グラフ`,
+      });
+
+      const showSplitToggle =
+        annualMetric === "loans" ||
+        annualMetric === "holdings" ||
+        annualMetric === "registered";
+      annualViewRow?.classList.toggle("hidden", !showSplitToggle);
+
+      const scoped = records.map((r) => ({
+        rec: r,
+        vals: getScopeYearValues(r, annualScope),
+      }));
+
+      // Determine Y scale and series
+      let maxVal = 10;
+      let unit = "冊";
+
+      if (annualMetric === "loans") {
+        unit = "冊";
+        maxVal = niceMax(Math.max(...scoped.map((s) => s.vals.loansTotal)) * 1.08);
+        annualChartCaption.textContent =
+          annualViewMode === "children_split"
+            ? `${scopeName}：一般等貸出と児童貸出の内訳推移（平成25〜令和7年度）`
+            : `${scopeName}：個人貸出冊数の推移（平成25〜令和7年度）`;
+      } else if (annualMetric === "holdings") {
+        unit = "冊";
+        maxVal = niceMax(
+          Math.max(
+            ...scoped.map((s) =>
+              Math.max(s.vals.holdingsTotal ?? 0, s.vals.holdingsBooks ?? 0),
+            ),
+          ) * 1.08,
+        );
+        annualChartCaption.textContent =
+          annualViewMode === "children_split"
+            ? `${scopeName}：図書蔵書（長野県概況ベース FY2016〜FY2025）の一般書 vs 児童書`
+            : `${scopeName}：実線は全資料蔵書（H25〜R6）、点線は図書のみ（H28〜R7）`;
+      } else if (annualMetric === "registered") {
+        unit = "人";
+        maxVal = niceMax(
+          Math.max(...scoped.map((s) => s.vals.registeredTotal)) * 1.08,
+        );
+        annualChartCaption.textContent =
+          annualViewMode === "children_split"
+            ? `${scopeName}：登録者数（成人等 vs 児童）。R2は削除基準見直し（10年→2年未更新）`
+            : `${scopeName}：有効登録者数。R1→R2の破線は削除基準見直しによる段差`;
+      } else if (annualMetric === "per_capita") {
+        unit = "冊";
+        maxVal = niceMax(
+          Math.max(
+            ...scoped.map((s) =>
+              Math.max(
+                calcPerCapita(s.vals.loansTotal, s.rec.population) ?? 0,
+                calcPerCapita(
+                  s.vals.holdingsTotal ?? s.vals.holdingsBooks,
+                  s.rec.population,
+                ) ?? 0,
+              ),
+            ),
+          ) * 1.12,
+          8,
+        );
+        annualChartCaption.textContent =
+          "全市人口1人あたりの貸出冊数（緑）と蔵書冊数（紺、R7は図書のみ）の推移";
+      } else {
+        unit = "冊";
+        maxVal = niceMax(
+          Math.max(
+            ...scoped.map((s) =>
+              Math.max(
+                s.vals.reservationsTotal ?? 0,
+                annualScope === "all" ? s.rec.groupLoansTotal : 0,
+                (s.vals.referenceCount ?? 0) * 10,
+              ),
+            ),
+          ) * 1.08,
+        );
+        annualChartCaption.textContent =
+          annualScope === "all"
+            ? "予約冊数（実線）・団体貸出冊数（紺）・調査相談件数（右目盛目安）"
+            : `${scopeName}：予約冊数（H25〜R6）・調査相談件数（H25〜R6）`;
+      }
+
+      // Grid lines
+      const gridTicks = 5;
+      for (let i = 0; i <= gridTicks; i++) {
+        const v = (maxVal / gridTicks) * i;
+        const y = pad.top + ch - (v / maxVal) * ch;
+        svg.appendChild(
+          svgEl("line", {
+            x1: pad.left,
+            y1: y,
+            x2: w - pad.right,
+            y2: y,
+            stroke: i === 0 ? "#94a3b8" : "#e2e8f0",
+            "stroke-width": i === 0 ? 1.2 : 1,
+          }),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: pad.left - 8,
+              y: y + 3.5,
+              "text-anchor": "end",
+              class: "fill-slate-500 text-[10px] font-mono",
+            },
+            annualMetric === "per_capita"
+              ? v.toFixed(1)
+              : formatAxisValue(v, unit),
+          ),
+        );
+      }
+
+      const step = cw / scoped.length;
+
+      // Key milestone vertical markers
+      const milestoneMarkers: Array<{ fy: number; label: string; color: string }> = [
+        { fy: 2015, label: "貸出ピーク", color: "#059669" },
+        { fy: 2020, label: "コロナ・基準変更", color: "#d97706" },
+        { fy: 2024, label: "SP開設", color: "#0284c7" },
+      ];
+      for (const mk of milestoneMarkers) {
+        const idx = scoped.findIndex((s) => s.rec.fiscalYear === mk.fy);
+        if (idx === -1) continue;
+        const x = pad.left + step * (idx + 0.5);
+        svg.appendChild(
+          svgEl("line", {
+            x1: x,
+            y1: pad.top,
+            x2: x,
+            y2: pad.top + ch,
+            stroke: mk.color,
+            "stroke-opacity": "0.35",
+            "stroke-dasharray": "4 3",
+            "stroke-width": 1.2,
+          }),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x,
+              y: pad.top - 8,
+              "text-anchor": "middle",
+              fill: mk.color,
+              class: "text-[9.5px] font-bold",
+            },
+            mk.label,
+          ),
+        );
+      }
+
+      // Draw Stacked Bars if children_split
+      if (showSplitToggle && annualViewMode === "children_split") {
+        const barW = Math.min(30, step * 0.58);
+        scoped.forEach(({ rec, vals }, idx) => {
+          const cx = pad.left + step * (idx + 0.5);
+          const isSel = rec.fiscalYear === selectedAnnualYear;
+
+          let total: number | null = null;
+          let child: number | null = null;
+          if (annualMetric === "loans") {
+            total = vals.loansTotal;
+            child = vals.loansChildren;
+          } else if (annualMetric === "registered") {
+            total = vals.registeredTotal;
+            child = vals.registeredChildren;
+          } else {
+            total = vals.holdingsBooks;
+            child = vals.holdingsBooksChildren;
+          }
+
+          if (total !== null && child !== null) {
+            const adult = Math.max(0, total - child);
+            const childH = (child / maxVal) * ch;
+            const adultH = (adult / maxVal) * ch;
+            const childY = pad.top + ch - childH;
+            const adultY = childY - adultH;
+
+            svg.appendChild(
+              svgEl("rect", {
+                x: cx - barW / 2,
+                y: adultY,
+                width: barW,
+                height: Math.max(0, adultH),
+                fill: isSel ? "#1b344d" : "#3b6b94",
+                rx: 2,
+              }),
+            );
+            svg.appendChild(
+              svgEl("rect", {
+                x: cx - barW / 2,
+                y: childY,
+                width: barW,
+                height: Math.max(0, childH),
+                fill: isSel ? "#059669" : "#34d399",
+                rx: 2,
+              }),
+            );
+            if (isSel) {
+              svg.appendChild(
+                svgEl("rect", {
+                  x: cx - barW / 2 - 2,
+                  y: adultY - 2,
+                  width: barW + 4,
+                  height: childH + adultH + 4,
+                  fill: "none",
+                  stroke: "#0c1724",
+                  "stroke-width": 1.5,
+                  rx: 4,
+                }),
+              );
+            }
+          } else {
+            svg.appendChild(
+              svgEl(
+                "text",
+                {
+                  x: cx,
+                  y: pad.top + ch - 12,
+                  "text-anchor": "middle",
+                  class: "fill-slate-400 text-[9px]",
+                },
+                "N/A",
+              ),
+            );
+          }
+        });
+
+        // Legend for stacked bars
+        const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+        legG.appendChild(
+          svgEl("rect", { x: 0, y: 0, width: 10, height: 10, rx: 2, fill: "#34d399" }),
+        );
+        legG.appendChild(
+          svgEl(
+            "text",
+            { x: 14, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+            "うち児童",
+          ),
+        );
+        legG.appendChild(
+          svgEl("rect", { x: 68, y: 0, width: 10, height: 10, rx: 2, fill: "#3b6b94" }),
+        );
+        legG.appendChild(
+          svgEl(
+            "text",
+            { x: 82, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+            "一般・成人等",
+          ),
+        );
+        svg.appendChild(legG);
+      } else {
+        // Line / multi-line series
+        const drawLineSeries = (
+          values: Array<number | null>,
+          color: string,
+          options: {
+            dashed?: boolean;
+            breakAtIndex?: number;
+            dotRadius?: number;
+            hollowDots?: boolean;
+          } = {},
+        ) => {
+          const pts: Array<{ idx: number; x: number; y: number; v: number }> = [];
+          values.forEach((v, idx) => {
+            if (v === null) return;
+            pts.push({
+              idx,
+              x: pad.left + step * (idx + 0.5),
+              y: pad.top + ch - (v / maxVal) * ch,
+              v,
+            });
+          });
+
+          const buildSegments = () => {
+            const segments: Array<typeof pts> = [];
+            let cur: typeof pts = [];
+            for (const p of pts) {
+              if (
+                options.breakAtIndex !== undefined &&
+                p.idx === options.breakAtIndex &&
+                cur.length > 0
+              ) {
+                segments.push(cur);
+                cur = [p];
+              } else {
+                cur.push(p);
+              }
+            }
+            if (cur.length > 0) segments.push(cur);
+            return segments;
+          };
+
+          for (const seg of buildSegments()) {
+            const d = seg
+              .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+              .join(" ");
+            svg.appendChild(
+              svgEl("path", {
+                d,
+                fill: "none",
+                stroke: color,
+                "stroke-width": options.dashed ? 2 : 2.6,
+                "stroke-dasharray": options.dashed ? "5 4" : "none",
+                "stroke-linecap": "round",
+                "stroke-linejoin": "round",
+              }),
+            );
+          }
+
+          const breakIdx = options.breakAtIndex;
+          if (breakIdx !== undefined) {
+            const pre = pts.find((p) => p.idx === breakIdx - 1);
+            const post = pts.find((p) => p.idx === breakIdx);
+            if (pre && post) {
+              svg.appendChild(
+                svgEl("line", {
+                  x1: pre.x,
+                  y1: pre.y,
+                  x2: post.x,
+                  y2: post.y,
+                  stroke: "#d97706",
+                  "stroke-width": 1.8,
+                  "stroke-dasharray": "4 4",
+                }),
+              );
+            }
+          }
+
+          for (const p of pts) {
+            const isSel = records[p.idx].fiscalYear === selectedAnnualYear;
+            svg.appendChild(
+              svgEl("circle", {
+                cx: p.x,
+                cy: p.y,
+                r: isSel ? (options.dotRadius ?? 4) + 2 : (options.dotRadius ?? 4),
+                fill: options.hollowDots || !isSel ? "#ffffff" : color,
+                stroke: color,
+                "stroke-width": isSel ? 2.5 : 2,
+              }),
+            );
+          }
+        };
+
+        if (annualMetric === "loans") {
+          drawLineSeries(
+            scoped.map((s) => s.vals.loansTotal),
+            "#059669",
+          );
+        } else if (annualMetric === "holdings") {
+          drawLineSeries(
+            scoped.map((s) => s.vals.holdingsBooks),
+            "#64748b",
+            { dashed: true, dotRadius: 3, hollowDots: true },
+          );
+          drawLineSeries(
+            scoped.map((s) => s.vals.holdingsTotal),
+            "#244666",
+          );
+          const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+          legG.appendChild(
+            svgEl("line", {
+              x1: 0,
+              y1: 5,
+              x2: 18,
+              y2: 5,
+              stroke: "#244666",
+              "stroke-width": 2.5,
+            }),
+          );
+          legG.appendChild(
+            svgEl(
+              "text",
+              { x: 22, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+              "全資料蔵書（H25〜R6）",
+            ),
+          );
+          legG.appendChild(
+            svgEl("line", {
+              x1: 145,
+              y1: 5,
+              x2: 163,
+              y2: 5,
+              stroke: "#64748b",
+              "stroke-width": 2,
+              "stroke-dasharray": "4 3",
+            }),
+          );
+          legG.appendChild(
+            svgEl(
+              "text",
+              { x: 167, y: 9, class: "fill-slate-600 text-[10px]" },
+              "図書のみ参考（H28〜R7）",
+            ),
+          );
+          svg.appendChild(legG);
+        } else if (annualMetric === "registered") {
+          drawLineSeries(
+            scoped.map((s) => s.vals.registeredTotal),
+            "#0284c7",
+            { breakAtIndex: 7 },
+          );
+        } else if (annualMetric === "per_capita") {
+          drawLineSeries(
+            scoped.map((s) =>
+              calcPerCapita(s.vals.loansTotal, s.rec.population),
+            ),
+            "#059669",
+          );
+          drawLineSeries(
+            scoped.map((s) =>
+              calcPerCapita(
+                s.vals.holdingsTotal ?? s.vals.holdingsBooks,
+                s.rec.population,
+              ),
+            ),
+            "#244666",
+            { dashed: false, dotRadius: 3.5 },
+          );
+          const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+          legG.appendChild(
+            svgEl("line", {
+              x1: 0,
+              y1: 5,
+              x2: 18,
+              y2: 5,
+              stroke: "#059669",
+              "stroke-width": 2.5,
+            }),
+          );
+          legG.appendChild(
+            svgEl(
+              "text",
+              { x: 22, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+              "1人あたり貸出冊数",
+            ),
+          );
+          legG.appendChild(
+            svgEl("line", {
+              x1: 135,
+              y1: 5,
+              x2: 153,
+              y2: 5,
+              stroke: "#244666",
+              "stroke-width": 2.5,
+            }),
+          );
+          legG.appendChild(
+            svgEl(
+              "text",
+              { x: 157, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+              "1人あたり蔵書冊数",
+            ),
+          );
+          svg.appendChild(legG);
+        } else {
+          drawLineSeries(
+            scoped.map((s) => s.vals.reservationsTotal),
+            "#0284c7",
+          );
+          if (annualScope === "all") {
+            drawLineSeries(
+              scoped.map((s) => s.rec.groupLoansTotal),
+              "#1b344d",
+              { dotRadius: 3.5 },
+            );
+          }
+          const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+          legG.appendChild(
+            svgEl("line", {
+              x1: 0,
+              y1: 5,
+              x2: 18,
+              y2: 5,
+              stroke: "#0284c7",
+              "stroke-width": 2.5,
+            }),
+          );
+          legG.appendChild(
+            svgEl(
+              "text",
+              { x: 22, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+              "予約冊数（H25〜R6）",
+            ),
+          );
+          if (annualScope === "all") {
+            legG.appendChild(
+              svgEl("line", {
+                x1: 145,
+                y1: 5,
+                x2: 163,
+                y2: 5,
+                stroke: "#1b344d",
+                "stroke-width": 2.5,
+              }),
+            );
+            legG.appendChild(
+              svgEl(
+                "text",
+                { x: 167, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+                "団体貸出冊数",
+              ),
+            );
+          }
+          svg.appendChild(legG);
+        }
+      }
+
+      // X-axis labels & interactive hit bands
+      scoped.forEach(({ rec }, idx) => {
+        const cx = pad.left + step * (idx + 0.5);
+        const isSel = rec.fiscalYear === selectedAnnualYear;
+
+        if (isSel) {
+          svg.appendChild(
+            svgEl("rect", {
+              x: pad.left + step * idx + 2,
+              y: pad.top,
+              width: Math.max(4, step - 4),
+              height: ch,
+              fill: "#3b6b94",
+              "fill-opacity": "0.07",
+              rx: 4,
+            }),
+          );
+        }
+
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h - 25,
+              "text-anchor": "middle",
+              class: isSel
+                ? "fill-alps-950 text-[10.5px] font-bold"
+                : "fill-slate-700 text-[10px]",
+            },
+            rec.shortEraLabel,
+          ),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h - 12,
+              "text-anchor": "middle",
+              class: isSel
+                ? "fill-alps-700 text-[9px] font-mono font-bold"
+                : "fill-slate-400 text-[9px] font-mono",
+            },
+            String(rec.fiscalYear),
+          ),
+        );
+
+        const hit = svgEl("rect", {
+          x: pad.left + step * idx,
+          y: pad.top,
+          width: step,
+          height: ch + 34,
+          fill: "transparent",
+          class: "cursor-pointer",
+        });
+        hit.setAttribute("tabindex", "0");
+        hit.setAttribute(
+          "aria-label",
+          `${rec.eraLabel}（${rec.fiscalYear}年度）の詳細を表示`,
+        );
+        hit.addEventListener("click", () => {
+          selectedAnnualYear = rec.fiscalYear;
+          updateAnnualSection();
+        });
+        hit.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            selectedAnnualYear = rec.fiscalYear;
+            updateAnnualSection();
+          }
+        });
+        svg.appendChild(hit);
+      });
+
+      annualMainChart.appendChild(svg);
+    }
+
+    function renderAnnualDetailPanel(): void {
+      if (!annualDetailPanel) return;
+      clearNode(annualDetailPanel);
+
+      const rec =
+        annualByYear.get(selectedAnnualYear) ??
+        dataset.annualRecords[dataset.annualRecords.length - 1];
+      const prevRec = annualByYear.get(rec.fiscalYear - 1) ?? null;
+
+      const cur = getScopeYearValues(rec, annualScope);
+      const prev = prevRec ? getScopeYearValues(prevRec, annualScope) : null;
+      const scopeName =
+        annualScope === "all"
+          ? "全市合計"
+          : (profileMap.get(annualScope)?.name ?? annualScope);
+
+      const topBar = el("div", "flex items-center justify-between gap-2");
+      const titleWrap = el("div");
+      titleWrap.appendChild(
+        el(
+          "p",
+          "font-mono text-[11px] font-semibold text-alps-700",
+          `${rec.fiscalYear}年度（${rec.eraLabel}）`,
+        ),
+      );
+      titleWrap.appendChild(
+        el("h3", "text-base font-bold text-slate-900", scopeName),
+      );
+      topBar.appendChild(titleWrap);
+
+      const navGroup = el("div", "flex items-center gap-1");
+      const prevBtn = el(
+        "button",
+        "rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:border-alps-400 disabled:opacity-40",
+        "←",
+      );
+      prevBtn.type = "button";
+      prevBtn.disabled = rec.fiscalYear <= 2013;
+      prevBtn.setAttribute("aria-label", "前年度");
+      prevBtn.addEventListener("click", () => {
+        selectedAnnualYear = Math.max(2013, rec.fiscalYear - 1);
+        updateAnnualSection();
+      });
+      const nextBtn = el(
+        "button",
+        "rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:border-alps-400 disabled:opacity-40",
+        "→",
+      );
+      nextBtn.type = "button";
+      nextBtn.disabled = rec.fiscalYear >= 2025;
+      nextBtn.setAttribute("aria-label", "翌年度");
+      nextBtn.addEventListener("click", () => {
+        selectedAnnualYear = Math.min(2025, rec.fiscalYear + 1);
+        updateAnnualSection();
+      });
+      navGroup.append(prevBtn, nextBtn);
+      topBar.appendChild(navGroup);
+      annualDetailPanel.appendChild(topBar);
+
+      const metricsList = el("dl", "mt-3 space-y-2 text-xs");
+
+      const addRow = (label: string, valText: string, subText?: string) => {
+        const box = el(
+          "div",
+          "rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200/80",
+        );
+        const row = el("div", "flex items-baseline justify-between gap-2");
+        row.appendChild(el("dt", "text-slate-500", label));
+        row.appendChild(el("dd", "font-mono font-bold text-slate-900", valText));
+        box.appendChild(row);
+        if (subText) {
+          box.appendChild(
+            el("p", "mt-0.5 text-right text-[11px] text-slate-500", subText),
+          );
+        }
+        metricsList.appendChild(box);
+      };
+
+      const loansYoY = calcYoYPercent(
+        cur.loansTotal,
+        prev ? prev.loansTotal : null,
+      );
+      const loansChildShare = calcSharePercent(
+        cur.loansChildren,
+        cur.loansTotal,
+      );
+      addRow(
+        "個人貸出冊数",
+        `${cur.loansTotal.toLocaleString("ja-JP")}冊`,
+        `前年比 ${formatSignedDelta(loansYoY)}${
+          loansChildShare !== null ? ` / 児童比率 ${loansChildShare}%` : ""
+        }`,
+      );
+
+      if (cur.holdingsTotal !== null) {
+        const holdYoY = calcYoYPercent(
+          cur.holdingsTotal,
+          prev ? prev.holdingsTotal : null,
+        );
+        addRow(
+          "蔵書数（全資料）",
+          `${cur.holdingsTotal.toLocaleString("ja-JP")}冊`,
+          `前年比 ${formatSignedDelta(holdYoY)}${
+            cur.holdingsBooks !== null
+              ? `（うち図書 ${cur.holdingsBooks.toLocaleString("ja-JP")}冊）`
+              : ""
+          }`,
+        );
+      } else {
+        const booksYoY = calcYoYPercent(
+          cur.holdingsBooks,
+          prev ? prev.holdingsBooks : null,
+        );
+        addRow(
+          "蔵書数（図書のみ・参考）",
+          cur.holdingsBooks !== null
+            ? `${cur.holdingsBooks.toLocaleString("ja-JP")}冊`
+            : "-",
+          `図書のみ前年比 ${formatSignedDelta(booksYoY)}（全資料未公表）`,
+        );
+      }
+
+      const regYoY = calcYoYPercent(
+        cur.registeredTotal,
+        prev ? prev.registeredTotal : null,
+      );
+      addRow(
+        "登録者数",
+        `${cur.registeredTotal.toLocaleString("ja-JP")}人`,
+        rec.registrationPolicyChange
+          ? "※削除基準変更（10年→2年未更新）"
+          : `前年比 ${formatSignedDelta(regYoY)}${
+              cur.registeredChildren !== null
+                ? ` / うち児童 ${cur.registeredChildren.toLocaleString("ja-JP")}人`
+                : ""
+            }`,
+      );
+
+      if (annualScope === "all") {
+        addRow(
+          "市民1人あたり貸出",
+          `${(calcPerCapita(cur.loansTotal, rec.population) ?? 0).toFixed(2)}冊`,
+          `奉仕対象人口 ${rec.population.toLocaleString("ja-JP")}人`,
+        );
+      } else {
+        addRow(
+          "開館日数 / 来館者数",
+          `${cur.openDays !== null ? `${cur.openDays}日` : "-"} / ${
+            cur.visitors !== null
+              ? `${cur.visitors.toLocaleString("ja-JP")}人`
+              : "-"
+          }`,
+        );
+      }
+
+      if (cur.reservationsTotal !== null || cur.referenceCount !== null) {
+        addRow(
+          "予約冊数 / 調査相談",
+          `${
+            cur.reservationsTotal !== null
+              ? `${cur.reservationsTotal.toLocaleString("ja-JP")}冊`
+              : "-"
+          } / ${
+            cur.referenceCount !== null
+              ? `${cur.referenceCount.toLocaleString("ja-JP")}件`
+              : "-"
+          }`,
+        );
+      }
+
+      annualDetailPanel.appendChild(metricsList);
+
+      if (rec.eventNotes.length > 0) {
+        const notesBox = el(
+          "div",
+          "mt-3 rounded-xl border border-alps-200 bg-alps-50/70 p-3 text-xs text-slate-700",
+        );
+        notesBox.appendChild(
+          el("p", "font-bold text-alps-900", "この年度のトピック・注記"),
+        );
+        const ul = el("ul", "mt-1 list-disc space-y-1 pl-4 text-[11px]");
+        for (const n of rec.eventNotes) {
+          ul.appendChild(el("li", "", n));
+        }
+        notesBox.appendChild(ul);
+        annualDetailPanel.appendChild(notesBox);
+      }
+
+      annualDetailPanel.appendChild(
+        el("p", "mt-2 text-[10px] text-slate-500", `出典: ${rec.dataSourceNote}`),
+      );
+    }
+
+    function updateAnnualSection(): void {
+      setToggleGroup(
+        annualMetricButtons,
+        "data-annual-metric",
+        annualMetric,
+        "rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition",
+        "rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900",
+      );
+      setToggleGroup(
+        annualViewButtons,
+        "data-annual-view",
+        annualViewMode,
+        "rounded-full bg-alps-900 px-3 py-1 text-xs font-semibold text-white transition",
+        "rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900",
+      );
+      renderSparklines();
+      renderAnnualMainChart();
+      renderAnnualDetailPanel();
+    }
+
+    for (const btn of annualMetricButtons) {
+      btn.addEventListener("click", () => {
+        const m = btn.dataset.annualMetric as AnnualMetric | undefined;
+        if (m) {
+          annualMetric = m;
+          updateAnnualSection();
+        }
+      });
+    }
+    for (const btn of annualViewButtons) {
+      btn.addEventListener("click", () => {
+        const v = btn.dataset.annualView as AnnualViewMode | undefined;
+        if (v) {
+          annualViewMode = v;
+          updateAnnualSection();
+        }
+      });
+    }
+    annualScopeSelect?.addEventListener("change", () => {
+      annualScope = (annualScopeSelect.value as "all" | BranchId) || "all";
+      updateAnnualSection();
+    });
+
+    // =========================================================================
+    // SECTION 3: Age Group Demographics
+    // =========================================================================
+    type AgeMetric =
+      | "regRate"
+      | "activeRatePop"
+      | "activeRateReg"
+      | "registeredCount";
+
+    let ageMetric: AgeMetric = "regRate";
+    let ageCompareR5 = true;
+    let ageBranchScope: "all" | BranchId = "all";
+    let selectedBracketIdx = 1; // 7-12歳 default highlight
+
+    const ageMetricButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-age-metric]"),
+    );
+    const ageCompareToggle = document.getElementById(
+      "age-compare-toggle",
+    ) as HTMLInputElement | null;
+    const ageBranchWrap = document.getElementById("age-branch-wrap");
+    const ageBranchSelect = document.getElementById(
+      "age-branch-select",
+    ) as HTMLSelectElement | null;
+    const ageChartSubtitle = document.getElementById("age-chart-subtitle");
+    const ageLegendR5 = document.getElementById("age-legend-r5");
+    const ageChartWrap = document.getElementById("age-chart-wrap");
+    const ageDetailPanel = document.getElementById("age-detail-panel");
+
+    const snap2023 = dataset.ageGroupSnapshots.find(
+      (s) => s.fiscalYear === 2023,
+    );
+    const snap2024 = dataset.ageGroupSnapshots.find(
+      (s) => s.fiscalYear === 2024,
+    );
+
+    function getAgeMetricValues(
+      snap: NonNullable<typeof snap2024>,
+    ): number[] {
+      if (ageMetric === "registeredCount") {
+        if (ageBranchScope !== "all" && snap.branchBreakdowns) {
+          return snap.branchBreakdowns[ageBranchScope];
+        }
+        return snap.brackets.map((b) => b.registeredTotal);
+      }
+      if (ageMetric === "regRate") {
+        return snap.brackets.map((b) => b.registrationRatePct);
+      }
+      if (ageMetric === "activeRatePop") {
+        return snap.brackets.map((b) => b.activeRateVsPopulationPct);
+      }
+      return snap.brackets.map((b) => b.activeRateVsRegisteredPct);
+    }
+
+    function renderAgeSection(): void {
+      if (
+        !snap2023 ||
+        !snap2024 ||
+        !ageChartWrap ||
+        !ageDetailPanel ||
+        !ageChartSubtitle
+      ) {
+        return;
+      }
+
+      setToggleGroup(
+        ageMetricButtons,
+        "data-age-metric",
+        ageMetric,
+        "rounded-xl bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition",
+        "rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900",
+      );
+
+      const isCount = ageMetric === "registeredCount";
+      ageBranchWrap?.classList.toggle("hidden", !isCount);
+      ageLegendR5?.classList.toggle("hidden", !ageCompareR5);
+
+      const branchLabel =
+        ageBranchScope === "all"
+          ? "全館合計"
+          : (profileMap.get(ageBranchScope)?.name ?? ageBranchScope);
+
+      const subtitleMap: Record<AgeMetric, string> = {
+        regRate: "市内人口に対する図書館カード登録率（%）",
+        activeRatePop: "市内人口のうち、年度内に実際に利用があった人の割合（%）",
+        activeRateReg:
+          "市内登録者のうち、年度内に実際に利用があった人の割合（%）",
+        registeredCount: `${branchLabel}：年齢階層別の登録者数（市内＋市外 人）`,
+      };
+      ageChartSubtitle.textContent = subtitleMap[ageMetric];
+
+      clearNode(ageChartWrap);
+      clearNode(ageDetailPanel);
+
+      const vals24 = getAgeMetricValues(snap2024);
+      const vals23 = getAgeMetricValues(snap2023);
+
+      const maxVal = isCount
+        ? niceMax(
+            Math.max(...vals24, ...(ageCompareR5 ? vals23 : [0])) * 1.1,
+            50,
+          )
+        : niceMax(
+            Math.max(...vals24, ...(ageCompareR5 ? vals23 : [0])) * 1.12,
+            20,
+          );
+
+      const w = 720;
+      const h = 300;
+      const pad = { top: 20, right: 16, bottom: 48, left: 48 };
+      const cw = w - pad.left - pad.right;
+      const ch = h - pad.top - pad.bottom;
+
+      const svg = svgEl("svg", {
+        viewBox: `0 0 ${w} ${h}`,
+        class: "w-full h-auto overflow-visible",
+        role: "img",
+        "aria-label": subtitleMap[ageMetric],
+      });
+
+      const ticks = 4;
+      for (let i = 0; i <= ticks; i++) {
+        const v = (maxVal / ticks) * i;
+        const y = pad.top + ch - (v / maxVal) * ch;
+        svg.appendChild(
+          svgEl("line", {
+            x1: pad.left,
+            y1: y,
+            x2: w - pad.right,
+            y2: y,
+            stroke: i === 0 ? "#94a3b8" : "#e2e8f0",
+            "stroke-width": i === 0 ? 1.2 : 1,
+          }),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: pad.left - 6,
+              y: y + 3.5,
+              "text-anchor": "end",
+              class: "fill-slate-500 text-[10px] font-mono",
+            },
+            isCount ? formatAxisValue(v, "人") : `${Math.round(v)}%`,
+          ),
+        );
+      }
+
+      const step = cw / snap2024.brackets.length;
+      const groupW = step * 0.72;
+
+      snap2024.brackets.forEach((br, idx) => {
+        const cx = pad.left + step * (idx + 0.5);
+        const isSel = idx === selectedBracketIdx;
+
+        if (isSel) {
+          svg.appendChild(
+            svgEl("rect", {
+              x: pad.left + step * idx + 2,
+              y: pad.top,
+              width: Math.max(4, step - 4),
+              height: ch,
+              fill: "#3b6b94",
+              "fill-opacity": "0.08",
+              rx: 4,
+            }),
+          );
+        }
+
+        const v24 = vals24[idx];
+        const v23 = vals23[idx];
+        const h24 = (v24 / maxVal) * ch;
+        const h23 = (v23 / maxVal) * ch;
+
+        if (ageCompareR5) {
+          const bw = groupW * 0.46;
+          svg.appendChild(
+            svgEl("rect", {
+              x: cx - bw - 1.5,
+              y: pad.top + ch - h23,
+              width: bw,
+              height: Math.max(1, h23),
+              rx: 2.5,
+              fill: "#cbd5e1",
+            }),
+          );
+          svg.appendChild(
+            svgEl("rect", {
+              x: cx + 1.5,
+              y: pad.top + ch - h24,
+              width: bw,
+              height: Math.max(1, h24),
+              rx: 2.5,
+              fill: isSel ? "#0c1724" : "#244666",
+            }),
+          );
+        } else {
+          const bw = Math.min(34, groupW * 0.72);
+          svg.appendChild(
+            svgEl("rect", {
+              x: cx - bw / 2,
+              y: pad.top + ch - h24,
+              width: bw,
+              height: Math.max(1, h24),
+              rx: 3,
+              fill: isSel ? "#0c1724" : "#244666",
+            }),
+          );
+        }
+
+        // Value label on top
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: ageCompareR5 ? cx + groupW * 0.22 : cx,
+              y: Math.max(pad.top + 8, pad.top + ch - h24 - 5),
+              "text-anchor": "middle",
+              class: isSel
+                ? "fill-alps-950 text-[9.5px] font-mono font-bold"
+                : "fill-slate-600 text-[9px] font-mono",
+            },
+            isCount ? v24.toLocaleString("ja-JP") : `${v24.toFixed(1)}%`,
+          ),
+        );
+
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: cx,
+              y: h - 20,
+              "text-anchor": "middle",
+              class: isSel
+                ? "fill-alps-950 text-[10px] font-bold"
+                : "fill-slate-700 text-[9.5px]",
+            },
+            br.label,
+          ),
+        );
+
+        const hit = svgEl("rect", {
+          x: pad.left + step * idx,
+          y: pad.top,
+          width: step,
+          height: ch + 30,
+          fill: "transparent",
+          class: "cursor-pointer",
+        });
+        hit.setAttribute("tabindex", "0");
+        hit.setAttribute("aria-label", `${br.label}の詳細を表示`);
+        hit.addEventListener("click", () => {
+          selectedBracketIdx = idx;
+          renderAgeSection();
+        });
+        hit.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            selectedBracketIdx = idx;
+            renderAgeSection();
+          }
+        });
+        svg.appendChild(hit);
+      });
+
+      ageChartWrap.appendChild(svg);
+
+      // Detail Panel for Selected Age Bracket
+      const b24 = snap2024.brackets[selectedBracketIdx];
+      const b23 = snap2023.brackets[selectedBracketIdx];
+      ageDetailPanel.appendChild(
+        el("p", "font-mono text-[11px] font-semibold text-alps-700", "選択中の年齢区分"),
+      );
+      ageDetailPanel.appendChild(
+        el("h3", "mt-0.5 text-lg font-bold text-slate-900", `${b24.label}（令和6年度）`),
+      );
+
+      const dl = el("dl", "mt-3 space-y-2 text-xs");
+      const addAgeRow = (k: string, v: string, sub?: string) => {
+        const box = el(
+          "div",
+          "rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200/80",
+        );
+        const row = el("div", "flex items-baseline justify-between gap-2");
+        row.appendChild(el("dt", "text-slate-500", k));
+        row.appendChild(el("dd", "font-mono font-bold text-slate-900", v));
+        box.appendChild(row);
+        if (sub) {
+          box.appendChild(el("p", "mt-0.5 text-right text-[11px] text-slate-500", sub));
+        }
+        dl.appendChild(box);
+      };
+
+      if (isCount && ageBranchScope !== "all" && snap2024.branchBreakdowns && snap2023.branchBreakdowns) {
+        const bc24 = snap2024.branchBreakdowns[ageBranchScope][selectedBracketIdx];
+        const bc23 = snap2023.branchBreakdowns[ageBranchScope][selectedBracketIdx];
+        addAgeRow(
+          `${branchLabel} 登録者`,
+          `${bc24.toLocaleString("ja-JP")}人`,
+          `令和5年度: ${bc23.toLocaleString("ja-JP")}人`,
+        );
+      }
+
+      addAgeRow(
+        "市内登録率（対人口）",
+        `${b24.registrationRatePct.toFixed(1)}%`,
+        `令和5年度: ${b23.registrationRatePct.toFixed(1)}%（全体平均 ${snap2024.totals.registrationRatePct}%）`,
+      );
+      addAgeRow(
+        "登録者数（全市）",
+        `${b24.registeredTotal.toLocaleString("ja-JP")}人`,
+        `市内 ${b24.registeredCity.toLocaleString("ja-JP")}人 / 市外 ${b24.registeredOutside.toLocaleString("ja-JP")}人`,
+      );
+      addAgeRow(
+        "実利用者数（R6年度利用あり）",
+        `${b24.activeUsers.toLocaleString("ja-JP")}人`,
+        `対人口 ${b24.activeRateVsPopulationPct.toFixed(1)}% / 対登録者 ${b24.activeRateVsRegisteredPct.toFixed(1)}%`,
+      );
+      addAgeRow(
+        "この年代の松本市人口",
+        `${b24.population.toLocaleString("ja-JP")}人`,
+        `全人口比 ${calcSharePercent(b24.population, snap2024.totals.population)}%`,
+      );
+
+      ageDetailPanel.appendChild(dl);
+    }
+
+    for (const btn of ageMetricButtons) {
+      btn.addEventListener("click", () => {
+        const m = btn.dataset.ageMetric as AgeMetric | undefined;
+        if (m) {
+          ageMetric = m;
+          renderAgeSection();
+        }
+      });
+    }
+    ageCompareToggle?.addEventListener("change", () => {
+      ageCompareR5 = ageCompareToggle.checked;
+      renderAgeSection();
+    });
+    ageBranchSelect?.addEventListener("change", () => {
+      ageBranchScope = (ageBranchSelect.value as "all" | BranchId) || "all";
+      renderAgeSection();
+    });
+
+    // =========================================================================
+    // SECTION 4: Branch Comparison
+    // =========================================================================
+    let branchYear = 2025;
+    let branchMetric: BranchMetricKey = "loansTotal";
+    let selectedBranchId: BranchId = "chuo";
+
+    const branchYearSelect = document.getElementById(
+      "branch-year-select",
+    ) as HTMLSelectElement | null;
+    const branchMetricButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>("[data-branch-metric]"),
+    );
+    const branchRankingList = document.getElementById("branch-ranking-list");
+    const branchProfilePanel = document.getElementById("branch-profile-panel");
+    const servicePointsPanel = document.getElementById("service-points-panel");
+
+    function formatBranchVal(val: number | null, metric: BranchMetricKey): string {
+      if (val === null) return "-";
+      if (metric === "childrenLoanShare") return `${val.toFixed(1)}%`;
+      if (metric === "turnoverRate") return `${val.toFixed(2)}回`;
+      if (metric === "registeredTotal") {
+        return `${val.toLocaleString("ja-JP")}人`;
+      }
+      return `${val.toLocaleString("ja-JP")}冊`;
+    }
+
+    function renderBranchSection(): void {
+      if (!branchRankingList || !branchProfilePanel || !servicePointsPanel) {
+        return;
+      }
+
+      setToggleGroup(
+        branchMetricButtons,
+        "data-branch-metric",
+        branchMetric,
+        "rounded-full bg-alps-900 px-3 py-1.5 text-xs font-semibold text-white transition",
+        "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-alps-400 hover:text-alps-900",
+      );
+
+      const rec =
+        annualByYear.get(branchYear) ??
+        dataset.annualRecords[dataset.annualRecords.length - 1];
+
+      const ranked = rec.branches
+        .map((b) => ({
+          branch: b,
+          profile: profileMap.get(b.branchId)!,
+          value: getBranchMetricValue(b, branchMetric) ?? 0,
+        }))
+        .sort((a, b) => b.value - a.value);
+
+      const maxVal = Math.max(1, ...ranked.map((r) => r.value));
+      const totalVal = ranked.reduce((s, r) => s + r.value, 0);
+
+      clearNode(branchRankingList);
+
+      ranked.forEach((item, rankIdx) => {
+        const isSel = item.branch.branchId === selectedBranchId;
+        const pct = Math.max(2, Math.round((item.value / maxVal) * 100));
+        const share =
+          branchMetric === "loansTotal" ||
+          branchMetric === "holdingsDisplay" ||
+          branchMetric === "registeredTotal"
+            ? calcSharePercent(item.value, totalVal)
+            : null;
+
+        const btn = el(
+          "button",
+          `block w-full rounded-xl border p-3 text-left transition ${
+            isSel
+              ? "border-alps-500 bg-alps-50/70 ring-1 ring-alps-300"
+              : "border-slate-200 bg-slate-50/40 hover:border-alps-300 hover:bg-white"
+          }`,
+        );
+        btn.type = "button";
+        btn.addEventListener("click", () => {
+          selectedBranchId = item.branch.branchId;
+          renderBranchSection();
+        });
+
+        const top = el("div", "flex flex-wrap items-center justify-between gap-2");
+        const left = el("div", "flex items-center gap-2");
+        left.appendChild(
+          el(
+            "span",
+            "inline-flex h-5 w-5 items-center justify-center rounded-md bg-white text-[11px] font-bold text-alps-900 ring-1 ring-slate-200",
+            String(rankIdx + 1),
+          ),
+        );
+        left.appendChild(
+          el("span", "text-xs font-bold text-slate-900", item.profile.name),
+        );
+        if (branchYear <= 2018 && item.profile.id === "kamata") {
+          left.appendChild(
+            el(
+              "span",
+              "rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] text-slate-600",
+              "当時: 西部図書館",
+            ),
+          );
+        }
+        top.appendChild(left);
+
+        const right = el("div", "flex items-baseline gap-2 font-mono text-xs");
+        right.appendChild(
+          el(
+            "span",
+            "font-bold text-slate-900",
+            formatBranchVal(item.value, branchMetric),
+          ),
+        );
+        if (share !== null) {
+          right.appendChild(
+            el("span", "text-[11px] text-slate-500", `(${share.toFixed(1)}%)`),
+          );
+        }
+        top.appendChild(right);
+        btn.appendChild(top);
+
+        const barTrack = el(
+          "div",
+          "mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/80",
+        );
+        const barFill = el(
+          "div",
+          `h-full rounded-full ${isSel ? "bg-alps-900" : "bg-alps-500"}`,
+        );
+        barFill.style.width = `${pct}%`;
+        barTrack.appendChild(barFill);
+        btn.appendChild(barTrack);
+
+        branchRankingList.appendChild(btn);
+      });
+
+      // Selected Branch Profile + 13-year mini summary
+      clearNode(branchProfilePanel);
+      const selProfile = profileMap.get(selectedBranchId)!;
+      const selBranch = rec.branches.find((b) => b.branchId === selectedBranchId)!;
+      const b2013 = annualByYear
+        .get(2013)
+        ?.branches.find((b) => b.branchId === selectedBranchId);
+      const b2025 = annualByYear
+        .get(2025)
+        ?.branches.find((b) => b.branchId === selectedBranchId);
+
+      branchProfilePanel.appendChild(
+        el(
+          "p",
+          "font-mono text-[11px] font-semibold text-alps-700",
+          `${rec.fiscalYear}年度（${rec.eraLabel}）の施設詳細`,
+        ),
+      );
+      branchProfilePanel.appendChild(
+        el("h3", "mt-0.5 text-lg font-bold text-slate-900", selProfile.name),
+      );
+      if (selProfile.formerName) {
+        branchProfilePanel.appendChild(
+          el("p", "text-[11px] text-slate-500", selProfile.formerName),
+        );
+      }
+      branchProfilePanel.appendChild(
+        el(
+          "p",
+          "mt-2 text-xs leading-relaxed text-slate-700",
+          selProfile.highlight,
+        ),
+      );
+
+      const dl = el("dl", "mt-3 grid grid-cols-2 gap-2 text-xs");
+      const items: Array<[string, string]> = [
+        ["開設時期", selProfile.openedAt],
+        ["延床面積", `${selProfile.areaSqm.toLocaleString("ja-JP")}㎡`],
+        ["個人貸出", `${selBranch.loansTotal.toLocaleString("ja-JP")}冊`],
+        [
+          selBranch.holdingsTotal !== null ? "蔵書(全資料)" : "蔵書(図書のみ)",
+          `${(
+            selBranch.holdingsTotal ??
+            selBranch.holdingsBooks ??
+            0
+          ).toLocaleString("ja-JP")}冊`,
+        ],
+        ["登録者数", `${selBranch.registeredTotal.toLocaleString("ja-JP")}人`],
+        [
+          "児童貸出比率",
+          `${calcSharePercent(selBranch.loansChildren, selBranch.loansTotal) ?? "-"}%`,
+        ],
+      ];
+      for (const [k, v] of items) {
+        const card = el(
+          "div",
+          "rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200/80",
+        );
+        card.appendChild(el("dt", "text-[11px] text-slate-500", k));
+        card.appendChild(
+          el("dd", "mt-0.5 font-mono font-bold text-slate-900", v),
+        );
+        dl.appendChild(card);
+      }
+      branchProfilePanel.appendChild(dl);
+
+      if (b2013 && b2025) {
+        const diffLoans = calcYoYPercent(b2025.loansTotal, b2013.loansTotal);
+        branchProfilePanel.appendChild(
+          el(
+            "p",
+            "mt-3 rounded-xl bg-white px-3 py-2 text-[11px] text-slate-600 ring-1 ring-slate-200/80",
+            `2013年度→2025年度の貸出変化：${b2013.loansTotal.toLocaleString("ja-JP")}冊 → ${b2025.loansTotal.toLocaleString("ja-JP")}冊（${formatSignedDelta(diffLoans)}）`,
+          ),
+        );
+      }
+
+      // Service Points notice (FY2024 or FY2025)
+      clearNode(servicePointsPanel);
+      if (rec.servicePoints.length > 0) {
+        servicePointsPanel.classList.remove("hidden");
+        servicePointsPanel.appendChild(
+          el(
+            "p",
+            "font-bold text-sky-900",
+            `${rec.eraLabel} サービスポイント実績（別枠集計）`,
+          ),
+        );
+        const ul = el("ul", "mt-1.5 space-y-1");
+        for (const sp of rec.servicePoints) {
+          ul.appendChild(
+            el(
+              "li",
+              "",
+              `・${sp.name}（${sp.openedAt}開設）：貸出 ${sp.loansTotal.toLocaleString("ja-JP")}冊 / 予約 ${sp.reservationsTotal.toLocaleString("ja-JP")}冊`,
+            ),
+          );
+        }
+        servicePointsPanel.appendChild(ul);
+      } else if (rec.fiscalYear === 2025) {
+        servicePointsPanel.classList.remove("hidden");
+        servicePointsPanel.appendChild(
+          el("p", "font-bold text-sky-900", "令和7年度 サービスポイントの扱い"),
+        );
+        servicePointsPanel.appendChild(
+          el(
+            "p",
+            "mt-1 leading-relaxed",
+            "令和7年度は長野県公共図書館概況ベースのため、村井駅SP・四賀公民館図書室SPの利用実績は中央図書館の数値に合算されています。",
+          ),
+        );
+      } else {
+        servicePointsPanel.classList.add("hidden");
+      }
+    }
+
+    branchYearSelect?.addEventListener("change", () => {
+      branchYear = Number.parseInt(branchYearSelect.value, 10) || 2025;
+      renderBranchSection();
+    });
+    for (const btn of branchMetricButtons) {
+      btn.addEventListener("click", () => {
+        const m = btn.dataset.branchMetric as BranchMetricKey | undefined;
+        if (m) {
+          branchMetric = m;
+          renderBranchSection();
+        }
+      });
+    }
+
+    // Initial render
+    updateLongTermSection();
+    updateAnnualSection();
+    renderAgeSection();
+    renderBranchSection();
+  </script>
+</BaseLayout>

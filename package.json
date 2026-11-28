@@ -21,6 +21,7 @@
     "pipeline:free-wifi": "tsx pipelines/build-free-wifi.ts",
     "pipeline:matsumoto-weather-history": "node --import tsx pipelines/build-matsumoto-weather-history.ts",
     "pipeline:population": "tsx pipelines/build-population.ts",
+    "pipeline:library-usage": "tsx pipelines/build-library-usage.ts",
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {

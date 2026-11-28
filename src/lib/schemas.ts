@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const licenseTypes = [
   "CC BY 4.0",
+  "CC BY-SA 4.0",
   "CC BY 3.0",
   "政府標準利用規約2.0",
   "公共データ利用規約（第1.0版）",
