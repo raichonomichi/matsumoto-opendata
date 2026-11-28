@@ -782,6 +782,8 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       buildTrendSeries,
       type CompareMode,
       computeGlobalMaxBandSide,
+      computeNiceMax,
+      computeNiceRange,
       computeSnapshotMetrics,
       DECADE_TREND_GROUPS,
       findDecadeTrendGroupForBand,
@@ -845,66 +847,6 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
     function formatSignedPct(diff: number, suffix = "%"): string {
       const prefix = diff > 0 ? "+" : "";
       return `${prefix}${diff.toFixed(1)}${suffix}`;
-    }
-
-    function computeNiceMax(rawMax: number): number {
-      if (rawMax <= 0) return 10;
-      const magnitude = 10 ** Math.floor(Math.log10(rawMax));
-      const norm = rawMax / magnitude;
-      let step = 1;
-      if (norm <= 1.2) step = 1.2;
-      else if (norm <= 1.5) step = 1.5;
-      else if (norm <= 2) step = 2;
-      else if (norm <= 2.5) step = 2.5;
-      else if (norm <= 3) step = 3;
-      else if (norm <= 4) step = 4;
-      else if (norm <= 5) step = 5;
-      else if (norm <= 6) step = 6;
-      else if (norm <= 8) step = 8;
-      else step = 10;
-      return Math.ceil(step * magnitude);
-    }
-
-    function computeNiceRange(minVal: number, maxVal: number, isPercent = false): {
-      min: number;
-      max: number;
-      ticks: number[];
-    } {
-      if (minVal === maxVal) {
-        const pad = isPercent ? 2 : Math.max(100, Math.round(maxVal * 0.1));
-        const min = Math.max(0, minVal - pad);
-        const max = maxVal + pad;
-        const step = (max - min) / 4;
-        return {
-          min,
-          max,
-          ticks: [0, 1, 2, 3, 4].map((i) => min + step * i),
-        };
-      }
-
-      const span = maxVal - minVal;
-      const rawStep = span / 4;
-      const mag = 10 ** Math.floor(Math.log10(rawStep));
-      const norm = rawStep / mag;
-      let niceStep = mag;
-      if (norm <= 1) niceStep = 1 * mag;
-      else if (norm <= 2) niceStep = 2 * mag;
-      else if (norm <= 2.5) niceStep = 2.5 * mag;
-      else if (norm <= 5) niceStep = 5 * mag;
-      else niceStep = 10 * mag;
-
-      const padding = span * 0.12;
-      const min = Math.max(
-        0,
-        Math.floor((minVal - padding) / niceStep) * niceStep,
-      );
-      const max = Math.ceil((maxVal + padding) / niceStep) * niceStep;
-      const tickCount = Math.max(2, Math.round((max - min) / niceStep));
-      const ticks: number[] = [];
-      for (let i = 0; i <= tickCount; i++) {
-        ticks.push(min + i * niceStep);
-      }
-      return { min, max, ticks };
     }
 
     const globalMaxCache = new Map<AgeGranularity, number>();

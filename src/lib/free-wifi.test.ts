@@ -12,10 +12,14 @@ import {
 } from "../../pipelines/free-wifi/schedule-parser";
 import {
   evaluateOpenStatus,
+  formatMinutes,
   getJstDateParts,
   haversineDistanceKm,
 } from "./free-wifi-schedule";
-import { freeWifiDatasetSchema } from "./free-wifi-schema";
+import {
+  type FacilitySchedule,
+  freeWifiDatasetSchema,
+} from "./free-wifi-schema";
 
 describe("free-wifi CSV parsers", () => {
   it("parses quoted CSV fields, BOM, fullwidth numbers, and normalizes phone numbers", () => {
@@ -279,6 +283,214 @@ describe("free-wifi schedule parser & JST open evaluation", () => {
     );
     expect(outdoor.status).toBe("outdoor");
   });
+
+  it("checks exact open/close minute boundaries, formatMinutes, and year-end boundary dates", () => {
+    expect(formatMinutes(0)).toBe("0:00");
+    expect(formatMinutes(540)).toBe("9:00");
+    expect(formatMinutes(1325)).toBe("22:05");
+
+    const schedule: FacilitySchedule = {
+      kind: "structured",
+      openDays: [0, 1, 2, 3, 4, 5, 6],
+      defaultHours: { openMinutes: 9 * 60, closeMinutes: 17 * 60 },
+      seasonalOverrides: [],
+      closedOnHolidays: "never",
+      mondayHolidayRule: "none",
+      dayAfterHolidayClosed: false,
+      nthWeekdaysClosed: [],
+      yearEndClosed: { startMmdd: "12-29", endMmdd: "01-03" },
+      summaryText: "毎日 9:00〜17:00",
+      holidayNote: null,
+      variableClosingNote: null,
+    };
+
+    // 08:59 JST -> closed (before open)
+    const beforeOpen = evaluateOpenStatus(
+      schedule,
+      new Date("2026-12-27T23:59:00Z"),
+      {},
+    );
+    expect(beforeOpen.status).toBe("closed");
+    expect(beforeOpen.reason).toContain("開館前");
+
+    // 09:00 JST -> open
+    expect(
+      evaluateOpenStatus(schedule, new Date("2026-12-28T00:00:00Z"), {}).status,
+    ).toBe("open");
+
+    // 16:59 JST -> open
+    expect(
+      evaluateOpenStatus(schedule, new Date("2026-12-28T07:59:00Z"), {}).status,
+    ).toBe("open");
+
+    // 17:00 JST -> closed (after close)
+    const atClose = evaluateOpenStatus(
+      schedule,
+      new Date("2026-12-28T08:00:00Z"),
+      {},
+    );
+    expect(atClose.status).toBe("closed");
+    expect(atClose.reason).toContain("閉館後");
+
+    // Year-end cross-year boundaries: 12-29 closed, 01-03 closed, 01-04 open
+    expect(
+      evaluateOpenStatus(schedule, new Date("2026-12-29T03:00:00Z"), {}).status,
+    ).toBe("closed");
+    expect(
+      evaluateOpenStatus(schedule, new Date("2027-01-03T03:00:00Z"), {}).status,
+    ).toBe("closed");
+    expect(
+      evaluateOpenStatus(schedule, new Date("2027-01-04T03:00:00Z"), {}).status,
+    ).toBe("open");
+
+    // Within-year closure range (startMmdd <= endMmdd)
+    const withinYear: FacilitySchedule = {
+      ...schedule,
+      yearEndClosed: { startMmdd: "08-13", endMmdd: "08-15" },
+    };
+    expect(
+      evaluateOpenStatus(withinYear, new Date("2026-08-14T03:00:00Z"), {})
+        .status,
+    ).toBe("closed");
+    expect(
+      evaluateOpenStatus(withinYear, new Date("2026-08-16T03:00:00Z"), {})
+        .status,
+    ).toBe("open");
+  });
+
+  it("handles nthWeekdaysClosed months filter, shiftIfHoliday=none, all mondayHolidayRules, and closedOnHolidays", () => {
+    const base: Extract<FacilitySchedule, { kind: "structured" }> = {
+      kind: "structured",
+      openDays: [0, 2, 3, 4, 5, 6], // Monday closed
+      defaultHours: { openMinutes: 9 * 60, closeMinutes: 17 * 60 },
+      dayHours: {
+        "6": { openMinutes: 10 * 60, closeMinutes: 18 * 60 },
+        holiday: { openMinutes: 10 * 60, closeMinutes: 16 * 60 },
+      },
+      seasonalOverrides: [],
+      closedOnHolidays: "never",
+      mondayHolidayRule: "none",
+      dayAfterHolidayClosed: false,
+      nthWeekdaysClosed: [],
+      yearEndClosed: null,
+      summaryText: "火〜日",
+      holidayNote: null,
+      variableClosingNote: null,
+    };
+
+    // nthWeekdaysClosed with months filter & shiftIfHoliday=none on holiday
+    const nthMonths: FacilitySchedule = {
+      ...base,
+      openDays: [0, 1, 2, 3, 4, 5, 6],
+      nthWeekdaysClosed: [
+        { nth: 1, weekday: 1, months: [5, 11], shiftIfHoliday: "none" },
+      ],
+    };
+    // 2026-05-04 Mon (1st Mon of May, holiday) -> closed because shiftIfHoliday="none"
+    expect(
+      evaluateOpenStatus(
+        nthMonths,
+        new Date("2026-05-04T03:00:00Z"),
+        sampleHolidays,
+      ).reason,
+    ).toContain("祝日振替対象");
+    // 2026-06-01 Mon (1st Mon of June, not in months) -> open
+    expect(
+      evaluateOpenStatus(nthMonths, new Date("2026-06-01T03:00:00Z"), {})
+        .status,
+    ).toBe("open");
+
+    // close_monday_and_next_day: Tue after Mon holiday is closed
+    const closeMonNext: FacilitySchedule = {
+      ...base,
+      mondayHolidayRule: "close_monday_and_next_day",
+    };
+    expect(
+      evaluateOpenStatus(
+        closeMonNext,
+        new Date("2026-11-23T03:00:00Z"),
+        sampleHolidays,
+      ).status,
+    ).toBe("closed");
+    expect(
+      evaluateOpenStatus(
+        closeMonNext,
+        new Date("2026-11-24T03:00:00Z"),
+        sampleHolidays,
+      ).reason,
+    ).toContain("翌日休館");
+
+    // open_and_close_next_day_if_not_holiday: when Tue is ALSO a holiday (May 4-5, 2026), Tue is open
+    const nextDayIfNotHol: FacilitySchedule = {
+      ...base,
+      mondayHolidayRule: "open_and_close_next_day_if_not_holiday",
+    };
+    expect(
+      evaluateOpenStatus(
+        nextDayIfNotHol,
+        new Date("2026-05-05T03:00:00Z"),
+        sampleHolidays,
+      ).status,
+    ).toBe("open");
+
+    // open_and_close_next_weekday: Mon+Tue+Wed holidays (May 4-6, 2026) -> Thu May 7 is closed
+    const nextWeekday: FacilitySchedule = {
+      ...base,
+      mondayHolidayRule: "open_and_close_next_weekday",
+    };
+    expect(
+      evaluateOpenStatus(
+        nextWeekday,
+        new Date("2026-05-04T03:00:00Z"),
+        sampleHolidays,
+      ).status,
+    ).toBe("open");
+    expect(
+      evaluateOpenStatus(
+        nextWeekday,
+        new Date("2026-05-07T03:00:00Z"),
+        sampleHolidays,
+      ).reason,
+    ).toContain("翌平日振替休館");
+
+    // closedOnHolidays: always closes on Sunday holiday vs except_sunday opens on Sunday holiday
+    const alwaysHol: FacilitySchedule = {
+      ...base,
+      closedOnHolidays: "always",
+    };
+    const exceptSunHol: FacilitySchedule = {
+      ...base,
+      closedOnHolidays: "except_sunday",
+    };
+    // 2026-05-03 Sunday holiday
+    expect(
+      evaluateOpenStatus(
+        alwaysHol,
+        new Date("2026-05-03T03:00:00Z"),
+        sampleHolidays,
+      ).status,
+    ).toBe("closed");
+    expect(
+      evaluateOpenStatus(
+        exceptSunHol,
+        new Date("2026-05-03T03:00:00Z"),
+        sampleHolidays,
+      ).status,
+    ).toBe("open");
+    // dayHours.holiday applies on open holiday -> 10:00〜16:00
+    expect(
+      evaluateOpenStatus(
+        exceptSunHol,
+        new Date("2026-05-03T03:00:00Z"),
+        sampleHolidays,
+      ).todayHoursText,
+    ).toBe("10:00〜16:00");
+    // dayHours["6"] applies on regular Saturday -> 10:00〜18:00
+    expect(
+      evaluateOpenStatus(base, new Date("2026-11-14T03:00:00Z"), sampleHolidays)
+        .todayHoursText,
+    ).toBe("10:00〜18:00");
+  });
 });
 
 describe("haversineDistanceKm", () => {
@@ -286,6 +498,10 @@ describe("haversineDistanceKm", () => {
     const km = haversineDistanceKm(36.2309, 137.9644, 36.2386, 137.9701);
     expect(km).toBeGreaterThan(0.85);
     expect(km).toBeLessThan(1.15);
+    expect(haversineDistanceKm(36.2309, 137.9644, 36.2309, 137.9644)).toBe(0);
+    expect(
+      haversineDistanceKm(36.2386, 137.9701, 36.2309, 137.9644),
+    ).toBeCloseTo(km, 10);
   });
 });
 

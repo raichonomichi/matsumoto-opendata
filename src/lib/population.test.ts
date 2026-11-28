@@ -14,6 +14,8 @@ import {
   aggregateBands,
   buildTrendSeries,
   computeGlobalMaxBandSide,
+  computeNiceMax,
+  computeNiceRange,
   computeSnapshotMetrics,
   findDecadeTrendGroupForBand,
   formatYmJa,
@@ -255,11 +257,71 @@ describe("population analytics helpers", () => {
 
     const maxSide = computeGlobalMaxBandSide(snapshots, "decade");
     expect(maxSide).toBe(140);
+    // 100-109 band spans 10 ages in five_year mode too, so uniform-age snapshot yields 140
+    expect(computeGlobalMaxBandSide(snapshots, "five_year")).toBe(140);
+    const under100Only = [
+      makeSnapshot(
+        "2026-11",
+        (age) => (age < 100 ? 14 : 0),
+        (age) => (age < 100 ? 14 : 0),
+      ),
+    ];
+    expect(computeGlobalMaxBandSide(under100Only, "decade")).toBe(140);
+    expect(computeGlobalMaxBandSide(under100Only, "five_year")).toBe(70);
+    expect(computeGlobalMaxBandSide(under100Only, "single")).toBe(14);
 
     const trend = buildTrendSeries(snapshots, 20, 29, "annual_same_month", 11);
     expect(trend).toHaveLength(4);
     expect(trend[0]?.diffFromStart).toBe(0);
     expect(trend[3]?.diffFromStart).toBe(80);
+    expect(trend[3]?.pctFromStart).toBe(40);
+    expect(trend[0]?.label).toBe("2017年11月");
+
+    const monthlyTrend = buildTrendSeries(snapshots, 0, 9, "monthly", 11);
+    expect(monthlyTrend).toHaveLength(5);
+    expect(monthlyTrend[3]?.label).toBe("2026/10");
+    expect(monthlyTrend[0]?.sharePct).toBe(9.1);
+    expect(buildTrendSeries([], 0, 9, "monthly", 11)).toEqual([]);
+
+    expect(formatYmJa("2026-11", false)).toBe("2026年11月");
+    expect(formatYmJa("invalid", true)).toBe("invalid");
+    expect(
+      findDecadeTrendGroupForBand({
+        id: "0-9",
+        label: "0〜9歳",
+        shortLabel: "0〜9歳",
+        minAge: 0,
+        maxAge: 9,
+        male: 0,
+        female: 0,
+        total: 0,
+        sharePct: 0,
+        maleSharePct: 0,
+      }),
+    ).toBe("0-9");
+  });
+
+  it("computes chart axis max and range scales cleanly", () => {
+    expect(computeNiceMax(0)).toBe(10);
+    expect(computeNiceMax(110)).toBe(120);
+    expect(computeNiceMax(1400)).toBe(1500);
+    expect(computeNiceMax(910)).toBe(1000);
+
+    const flatCount = computeNiceRange(1000, 1000, false);
+    expect(flatCount).toEqual({
+      min: 900,
+      max: 1100,
+      ticks: [900, 950, 1000, 1050, 1100],
+    });
+
+    const flatPct = computeNiceRange(1, 1, true);
+    expect(flatPct.min).toBe(0);
+    expect(flatPct.max).toBe(3);
+
+    const ranged = computeNiceRange(100, 500, false);
+    expect(ranged.min).toBeLessThanOrEqual(100);
+    expect(ranged.max).toBeGreaterThanOrEqual(500);
+    expect(ranged.ticks.length).toBeGreaterThanOrEqual(3);
   });
 
   it("rejects gaps in months when building dataset and serializes round-trip JSON", () => {

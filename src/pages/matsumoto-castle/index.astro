@@ -537,6 +537,16 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
   />
 
   <script>
+    import {
+      clampDateToRange,
+      formatFullDateJa,
+      formatShortDateJa as formatShortDateWithDow,
+      getActiveNearbyExhibitions,
+      getAnchorDate as resolveAnchorDate,
+      pickRecommendedDays,
+      resolveJumpMonthTarget,
+      resolveRecommendationWindow,
+    } from "@/lib/matsumoto-castle-client";
     import type {
       CalendarDay,
       CastleEvent,
@@ -566,8 +576,6 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
     const availableMonths = Array.from(
       new Set(dataset.days.map((d) => d.date.slice(0, 7))),
     ).sort();
-
-    const DOW_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
     interface CrowdMeta {
       symbol: string;
@@ -635,33 +643,11 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
     }
 
     function clampDateToDataset(ymd: string): string {
-      if (ymd < dataset.range.startDate) return dataset.range.startDate;
-      if (ymd > dataset.range.endDate) return dataset.range.endDate;
-      return ymd;
-    }
-
-    function addDaysYmd(ymd: string, deltaDays: number): string {
-      const [y, m, d] = ymd.split("-").map((n) => Number.parseInt(n, 10));
-      const dt = new Date(Date.UTC(y, m - 1, d + deltaDays));
-      const yy = dt.getUTCFullYear();
-      const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
-      const dd = String(dt.getUTCDate()).padStart(2, "0");
-      return `${yy}-${mm}-${dd}`;
+      return clampDateToRange(ymd, dataset.range);
     }
 
     function formatShortDateJa(ymd: string): string {
-      const day = dayByDate.get(ymd);
-      const m = Number.parseInt(ymd.slice(5, 7), 10);
-      const d = Number.parseInt(ymd.slice(8, 10), 10);
-      const dow = day ? DOW_LABELS[day.dayOfWeek] : "";
-      return `${m}月${d}日(${dow})`;
-    }
-
-    function formatFullDateJa(day: CalendarDay): string {
-      const y = day.date.slice(0, 4);
-      const m = Number.parseInt(day.date.slice(5, 7), 10);
-      const d = Number.parseInt(day.date.slice(8, 10), 10);
-      return `${y}年${m}月${d}日（${DOW_LABELS[day.dayOfWeek]}）`;
+      return formatShortDateWithDow(ymd, dayByDate.get(ymd)?.dayOfWeek);
     }
 
     function el<K extends keyof HTMLElementTagNameMap>(
@@ -751,70 +737,34 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
     }
 
     function getAnchorDate(): string {
-      if (realTodayYmd <= dataset.range.endDate) {
-        return clampDateToDataset(realTodayYmd);
-      }
-      return `${currentMonth}-01`;
+      return resolveAnchorDate(realTodayYmd, currentMonth, dataset.range);
     }
 
     function renderRecommendations(): void {
       if (!recommendationsGrid || !recommendationsEmpty) return;
 
       const anchor = getAnchorDate();
-      let rangeStart = anchor;
-      let rangeEnd = clampDateToDataset(addDaysYmd(anchor, 29));
-      let windowText = `${formatShortDateJa(rangeStart)}〜${formatShortDateJa(rangeEnd)}`;
-
-      if (windowFilter === "next_90") {
-        rangeEnd = clampDateToDataset(addDaysYmd(anchor, 89));
-        windowText = `${formatShortDateJa(rangeStart)}〜${formatShortDateJa(rangeEnd)}`;
-      } else if (windowFilter === "current_month") {
-        const monthDays = dataset.days.filter((d) =>
-          d.date.startsWith(currentMonth),
-        );
-        if (monthDays.length > 0) {
-          rangeStart = monthDays[0].date;
-          rangeEnd = monthDays[monthDays.length - 1].date;
-          const y = currentMonth.slice(0, 4);
-          const m = Number.parseInt(currentMonth.slice(5, 7), 10);
-          windowText = `${y}年${m}月`;
-        }
-      }
+      const { rangeStart, rangeEnd, windowText } = resolveRecommendationWindow({
+        anchor,
+        currentMonth,
+        windowFilter,
+        days: dataset.days,
+        range: dataset.range,
+        dayByDate,
+      });
 
       if (finderAnchorNote) {
         finderAnchorNote.textContent = `検索対象: ${windowText}`;
       }
 
-      const candidates = dataset.days.filter((day) => {
-        if (day.date < rangeStart || day.date > rangeEnd) return false;
-        if (day.crowdLevel === "closed" || day.crowdScore === null) {
-          return false;
-        }
-        const isOff = day.isWeekend || day.holidayName !== null;
-        if (dowFilter === "weekday" && isOff) return false;
-        if (dowFilter === "weekend_holiday" && !isOff) return false;
-        if (goalMode === "with_event" && day.eventIds.length === 0) {
-          return false;
-        }
-        return true;
+      const picks = pickRecommendedDays({
+        days: dataset.days,
+        rangeStart,
+        rangeEnd,
+        goalMode,
+        dowFilter,
+        eventById,
       });
-
-      const sorted = [...candidates].sort((a, b) => {
-        if (goalMode === "avoid_crowd") {
-          const diff = (a.crowdScore ?? 100) - (b.crowdScore ?? 100);
-          return diff !== 0 ? diff : a.date.localeCompare(b.date);
-        }
-        const aHasCastle = a.eventIds.some(
-          (id) => eventById.get(id)?.scope === "castle",
-        );
-        const bHasCastle = b.eventIds.some(
-          (id) => eventById.get(id)?.scope === "castle",
-        );
-        if (aHasCastle !== bHasCastle) return aHasCastle ? -1 : 1;
-        return a.date.localeCompare(b.date);
-      });
-
-      const picks = sorted.slice(0, 6);
       recommendationsGrid.replaceChildren();
 
       if (picks.length === 0) {
@@ -1370,14 +1320,9 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       }
       const year = Number.parseInt(currentMonth.slice(0, 4), 10);
       const month = Number.parseInt(currentMonth.slice(5, 7), 10);
-      const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-      const monthStart = `${currentMonth}-01`;
-      const monthEnd = `${currentMonth}-${String(lastDay).padStart(2, "0")}`;
 
       exhibitionsMonthBadge.textContent = `${year}年${month}月`;
-      const active = exhibitions.filter(
-        (ev) => ev.startDate <= monthEnd && ev.endDate >= monthStart,
-      );
+      const active = getActiveNearbyExhibitions(exhibitions, currentMonth);
 
       exhibitionsList.replaceChildren();
       if (active.length === 0) {
@@ -1531,18 +1476,13 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
     for (const btn of jumpMonthButtons) {
       btn.addEventListener("click", () => {
         const monthNum = Number.parseInt(btn.dataset.jumpMonth ?? "0", 10);
-        if (monthNum < 1 || monthNum > 12) return;
-        const mm = String(monthNum).padStart(2, "0");
-        const anchorMonth = initialDate.slice(0, 7);
-        const matchingMonths = availableMonths.filter((m) =>
-          m.endsWith(`-${mm}`),
+        const target = resolveJumpMonthTarget(
+          monthNum,
+          availableMonths,
+          initialDate,
         );
-        const chosen =
-          matchingMonths.find((m) => m >= anchorMonth) ?? matchingMonths[0];
-        if (chosen) {
-          const defaultDate =
-            chosen === initialDate.slice(0, 7) ? initialDate : `${chosen}-01`;
-          selectMonthAndDate(chosen, defaultDate);
+        if (target) {
+          selectMonthAndDate(target.targetMonth, target.targetDate);
           document
             .getElementById("calendar-section")
             ?.scrollIntoView({ behavior: "smooth", block: "start" });

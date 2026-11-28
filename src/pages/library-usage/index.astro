@@ -850,9 +850,11 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       calcYoYPercent,
       formatAxisValue,
       formatJaCount,
+      formatSignedDelta,
       getBranchMetricValue,
       getCombinedTimelinePoints,
       getScopeYearValues,
+      niceMax,
     } from "@/lib/library-usage-metrics";
     import type {
       BranchId,
@@ -896,31 +898,6 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       while (node.firstChild) {
         node.removeChild(node.firstChild);
       }
-    }
-
-    function formatSignedDelta(pct: number | null): string {
-      if (pct === null) return "-";
-      const sign = pct > 0 ? "+" : "";
-      return `${sign}${pct.toFixed(1)}%`;
-    }
-
-    function niceMax(rawMax: number, minFloor = 10): number {
-      if (rawMax <= 0) return minFloor;
-      const exp = Math.floor(Math.log10(rawMax));
-      const base = 10 ** exp;
-      const frac = rawMax / base;
-      let niceFrac = 10;
-      if (frac <= 1.0) niceFrac = 1.0;
-      else if (frac <= 1.2) niceFrac = 1.2;
-      else if (frac <= 1.5) niceFrac = 1.5;
-      else if (frac <= 2.0) niceFrac = 2.0;
-      else if (frac <= 2.5) niceFrac = 2.5;
-      else if (frac <= 3.0) niceFrac = 3.0;
-      else if (frac <= 4.0) niceFrac = 4.0;
-      else if (frac <= 5.0) niceFrac = 5.0;
-      else if (frac <= 6.0) niceFrac = 6.0;
-      else if (frac <= 8.0) niceFrac = 8.0;
-      return niceFrac * base;
     }
 
     function setToggleGroup(
