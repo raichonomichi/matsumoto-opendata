@@ -253,6 +253,8 @@ describe("library-usage-metrics", () => {
     expect(formatJaCount(1532796, "冊")).toBe("153.3万冊");
     expect(formatJaCount(6282, "人")).toBe("6,282人");
     expect(formatAxisValue(1500000, "冊")).toBe("150万");
+    expect(formatAxisValue(12000, "件")).toBe("1.2万");
+    expect(formatAxisValue(600, "件")).toBe("600");
     expect(calcYoYPercent(1532796, 1516078)).toBe(1.1);
     expect(calcSharePercent(624623, 1532796)).toBe(40.8);
     expect(calcPerCapita(1532796, 233940)).toBe(6.55);

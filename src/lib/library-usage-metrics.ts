@@ -47,7 +47,7 @@ export function formatJaCount(value: number, unit = ""): string {
  */
 export function formatAxisValue(value: number, unit: string): string {
   if (value === 0) return "0";
-  if (unit === "冊" || unit === "点" || unit === "人") {
+  if (unit === "冊" || unit === "点" || unit === "人" || unit === "件") {
     if (Math.abs(value) >= 1_000_000) {
       const man = Math.round(value / 10_000);
       return `${man.toLocaleString("ja-JP")}万`;

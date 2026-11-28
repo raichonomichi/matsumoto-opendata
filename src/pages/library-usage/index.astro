@@ -1885,9 +1885,10 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
           ? "全市合計"
           : (profileMap.get(annualScope)?.name ?? annualScope);
 
+      const isServices = annualMetric === "services";
       const w = 740;
       const h = 340;
-      const pad = { top: 26, right: 20, bottom: 48, left: 56 };
+      const pad = { top: 34, right: isServices ? 58 : 20, bottom: 48, left: 56 };
       const cw = w - pad.left - pad.right;
       const ch = h - pad.top - pad.bottom;
 
@@ -1911,6 +1912,7 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
 
       // Determine Y scale and series
       let maxVal = 10;
+      let refMax: number | null = null;
       let unit = "冊";
 
       if (annualMetric === "loans") {
@@ -1968,15 +1970,17 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
               Math.max(
                 s.vals.reservationsTotal ?? 0,
                 annualScope === "all" ? s.rec.groupLoansTotal : 0,
-                (s.vals.referenceCount ?? 0) * 10,
               ),
             ),
           ) * 1.08,
         );
+        refMax = niceMax(
+          Math.max(...scoped.map((s) => s.vals.referenceCount ?? 0)) * 1.15,
+        );
         annualChartCaption.textContent =
           annualScope === "all"
-            ? "予約冊数（実線）・団体貸出冊数（紺）・調査相談件数（右目盛目安）"
-            : `${scopeName}：予約冊数（H25〜R6）・調査相談件数（H25〜R6）`;
+            ? "左軸：予約冊数（青）・団体貸出冊数（紺） ／ 右軸：調査相談件数（橙・破線）"
+            : `${scopeName}：左軸＝予約冊数（青・H25〜R6） ／ 右軸＝調査相談件数（橙・破線・H25〜R6）`;
       }
 
       // Grid lines
@@ -2006,6 +2010,58 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
             annualMetric === "per_capita"
               ? v.toFixed(1)
               : formatAxisValue(v, unit),
+          ),
+        );
+        if (isServices && refMax !== null) {
+          const rv = Math.round((refMax / gridTicks) * i);
+          svg.appendChild(
+            svgEl(
+              "text",
+              {
+                x: w - pad.right + 8,
+                y: y + 3.5,
+                "text-anchor": "start",
+                class: "fill-amber-700 text-[10px] font-mono",
+              },
+              formatAxisValue(rv, "件"),
+            ),
+          );
+        }
+      }
+      if (isServices && refMax !== null) {
+        svg.appendChild(
+          svgEl("line", {
+            x1: w - pad.right,
+            y1: pad.top,
+            x2: w - pad.right,
+            y2: pad.top + ch,
+            stroke: "#f59e0b",
+            "stroke-opacity": "0.45",
+            "stroke-width": 1,
+          }),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: pad.left - 8,
+              y: pad.top - 10,
+              "text-anchor": "end",
+              class: "fill-slate-500 text-[9.5px] font-medium",
+            },
+            "左軸(冊)",
+          ),
+        );
+        svg.appendChild(
+          svgEl(
+            "text",
+            {
+              x: w - pad.right + 8,
+              y: pad.top - 10,
+              "text-anchor": "start",
+              class: "fill-amber-700 text-[9.5px] font-medium",
+            },
+            "右軸(件)",
           ),
         );
       }
@@ -2127,7 +2183,7 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
         });
 
         // Legend for stacked bars
-        const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+        const legG = svgEl("g", { transform: `translate(${pad.left}, 4)` });
         legG.appendChild(
           svgEl("rect", { x: 0, y: 0, width: 10, height: 10, rx: 2, fill: "#34d399" }),
         );
@@ -2159,15 +2215,17 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
             breakAtIndex?: number;
             dotRadius?: number;
             hollowDots?: boolean;
+            scaleMax?: number;
           } = {},
         ) => {
+          const denom = options.scaleMax ?? maxVal;
           const pts: Array<{ idx: number; x: number; y: number; v: number }> = [];
           values.forEach((v, idx) => {
             if (v === null) return;
             pts.push({
               idx,
               x: pad.left + step * (idx + 0.5),
-              y: pad.top + ch - (v / maxVal) * ch,
+              y: pad.top + ch - (v / denom) * ch,
               v,
             });
           });
@@ -2257,7 +2315,7 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
             scoped.map((s) => s.vals.holdingsTotal),
             "#244666",
           );
-          const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+          const legG = svgEl("g", { transform: `translate(${pad.left}, 4)` });
           legG.appendChild(
             svgEl("line", {
               x1: 0,
@@ -2317,7 +2375,7 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
             "#244666",
             { dashed: false, dotRadius: 3.5 },
           );
-          const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+          const legG = svgEl("g", { transform: `translate(${pad.left}, 4)` });
           legG.appendChild(
             svgEl("line", {
               x1: 0,
@@ -2365,7 +2423,14 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
               { dotRadius: 3.5 },
             );
           }
-          const legG = svgEl("g", { transform: `translate(${pad.left}, 8)` });
+          if (refMax !== null) {
+            drawLineSeries(
+              scoped.map((s) => s.vals.referenceCount),
+              "#d97706",
+              { dashed: true, dotRadius: 3.5, hollowDots: true, scaleMax: refMax },
+            );
+          }
+          const legG = svgEl("g", { transform: `translate(${pad.left}, 4)` });
           legG.appendChild(
             svgEl("line", {
               x1: 0,
@@ -2380,15 +2445,15 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
             svgEl(
               "text",
               { x: 22, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
-              "予約冊数（H25〜R6）",
+              "予約冊数（左軸）",
             ),
           );
           if (annualScope === "all") {
             legG.appendChild(
               svgEl("line", {
-                x1: 145,
+                x1: 130,
                 y1: 5,
-                x2: 163,
+                x2: 148,
                 y2: 5,
                 stroke: "#1b344d",
                 "stroke-width": 2.5,
@@ -2397,11 +2462,34 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
             legG.appendChild(
               svgEl(
                 "text",
-                { x: 167, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
-                "団体貸出冊数",
+                { x: 152, y: 9, class: "fill-slate-700 text-[10px] font-medium" },
+                "団体貸出冊数（左軸）",
               ),
             );
           }
+          const refLegX = annualScope === "all" ? 275 : 130;
+          legG.appendChild(
+            svgEl("line", {
+              x1: refLegX,
+              y1: 5,
+              x2: refLegX + 18,
+              y2: 5,
+              stroke: "#d97706",
+              "stroke-width": 2,
+              "stroke-dasharray": "4 3",
+            }),
+          );
+          legG.appendChild(
+            svgEl(
+              "text",
+              {
+                x: refLegX + 22,
+                y: 9,
+                class: "fill-amber-700 text-[10px] font-medium",
+              },
+              "調査相談件数（右軸・H25〜R6）",
+            ),
+          );
           svg.appendChild(legG);
         }
       }
