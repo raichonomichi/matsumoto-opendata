@@ -1365,6 +1365,8 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
           class: "cursor-pointer outline-none",
           tabindex: "0",
           role: "button",
+          "data-band-id": band.id,
+          "aria-pressed": isSelected ? "true" : "false",
           "aria-label": `${band.label} 総数 ${band.total.toLocaleString("ja-JP")}人 男性 ${band.male.toLocaleString("ja-JP")}人 女性 ${band.female.toLocaleString("ja-JP")}人`,
         });
 
@@ -1510,15 +1512,30 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
         const activatePreview = () => {
           renderBandInspector(band, cmpBand, compareSnap);
         };
-        rowGroup.addEventListener("mouseenter", activatePreview);
-        rowGroup.addEventListener("focus", activatePreview);
-        rowGroup.addEventListener("click", () => {
+        const selectBand = (restoreFocus: boolean) => {
           inspectedBandId = band.id;
           trendMode = "decade";
           selectedTrendGroupId = findDecadeTrendGroupForBand(band);
           renderBandInspector(band, cmpBand, compareSnap);
           renderPyramid(current, compareSnap);
           renderTrendSection();
+          if (restoreFocus && pyramidSvgEl) {
+            const nextRow = pyramidSvgEl.querySelector<SVGGElement>(
+              `[data-band-id="${band.id}"]`,
+            );
+            nextRow?.focus();
+          }
+        };
+        rowGroup.addEventListener("mouseenter", activatePreview);
+        rowGroup.addEventListener("focus", activatePreview);
+        rowGroup.addEventListener("click", () => {
+          selectBand(false);
+        });
+        rowGroup.addEventListener("keydown", (event: KeyboardEvent) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectBand(true);
+          }
         });
 
         pyramidSvgEl.appendChild(rowGroup);
