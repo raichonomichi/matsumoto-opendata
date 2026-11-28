@@ -21,8 +21,9 @@ const bus2Meta = dataset.sources.gtfs.feeds.find(
 );
 
 const initialPresetId = "matsumoto-station-area";
-// Build-time SSR preview snapshot (weekday evening 19:30 JST fallback before JS hydrates)
+// Build-time SSR preview snapshot (explicitly labeled for no-JS / pre-hydration fallback)
 const ssrReferenceDate = new Date("2026-11-27T19:30:00+09:00");
+const ssrReferenceLabel = "2026/11/27（金・平日ダイヤ参考スナップショット）";
 const ssrBoard = evaluateCountdownBoard(
   dataset,
   { kind: "preset", presetId: initialPresetId },
@@ -627,6 +628,15 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
 
     <!-- Countdown Card Grid -->
     <section aria-label="最終バス カウントダウン一覧" class="space-y-4">
+      <p
+        id="ssr-snapshot-notice"
+        class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-relaxed text-slate-700"
+      >
+        初期表示（JavaScript読込前・無効時）は{" "}
+        <strong class="font-semibold text-slate-900">{ssrReferenceLabel}</strong>{" "}
+        の参考時刻表を表示しています。土休日・祝日・お盆・特定曜日は最終時刻が異なるため、JavaScriptを有効にして現在時刻のダイヤをご確認ください。
+      </p>
+
       <div id="board-list" class="grid gap-4 md:grid-cols-2">
         {ssrBoard.items.map((item) => (
           <article
@@ -653,11 +663,11 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
               <div class="mt-3 flex items-baseline justify-between gap-3 rounded-xl bg-slate-50 px-3.5 py-2.5">
                 <span class="text-xs font-semibold text-slate-500">
                   {item.lastDepartureMinutes !== null
-                    ? `最終発車 ${formatMinutesToHHMM(item.lastDepartureMinutes)}`
+                    ? `参考最終（2026/11/27 平日） ${formatMinutesToHHMM(item.lastDepartureMinutes)}`
                     : "運行曜日限定"}
                 </span>
                 <span class="font-mono text-sm font-bold text-alps-950">
-                  {item.totalTrips > 0 ? `1日${item.totalTrips}本` : item.registeredDaysLabels.join("・")}
+                  {item.totalTrips > 0 ? `平日${item.totalTrips}本` : item.registeredDaysLabels.join("・")}
                 </span>
               </div>
             </div>
@@ -854,7 +864,8 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
     let pinnedKeys = loadPinnedKeys();
 
     let lastBucketMap = new Map<string, string>();
-    let lastMinuteKey = "";
+    let lastYmd = "";
+    const ssrNoticeEl = document.getElementById("ssr-snapshot-notice");
 
     const liveClockEl = document.getElementById("live-clock");
     const dayPatternBadgeEl = document.getElementById("day-pattern-badge");
@@ -1395,8 +1406,8 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       const routeStopsHtml =
         viewMode === "routes" && route
           ? `
-            <details class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
-              <summary class="cursor-pointer text-[11px] font-semibold text-alps-800 hover:text-alps-950">
+            <details data-details-kind="route-stops" class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+              <summary data-details-summary="route-stops" class="cursor-pointer text-[11px] font-semibold text-alps-800 hover:text-alps-950">
                 この路線の全${route.stopIndices.length}停留所から選んでカウントダウン表示
               </summary>
               <div class="mt-2 flex max-h-40 flex-wrap gap-1.5 overflow-y-auto pt-1">
@@ -1543,8 +1554,8 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
               </a>
             </div>
 
-            <details class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
-              <summary class="cursor-pointer text-[11px] font-semibold text-slate-700 hover:text-alps-950">
+            <details data-details-kind="timetable" class="mt-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+              <summary data-details-summary="timetable" class="cursor-pointer text-[11px] font-semibold text-slate-700 hover:text-alps-950">
                 本日の全発車時刻を見る（${item.todayDepartures.length}本）
               </summary>
               <div class="mt-2 flex flex-wrap gap-1.5 pt-1">
@@ -1604,7 +1615,118 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       }
     }
 
+    function captureBoardInteractionState(): {
+      openDetails: Set<string>;
+      focusTarget: {
+        cardKey: string;
+        kind: "pin" | "summary" | "jump" | "map";
+        value?: string;
+      } | null;
+    } {
+      const openDetails = new Set<string>();
+      let focusTarget: {
+        cardKey: string;
+        kind: "pin" | "summary" | "jump" | "map";
+        value?: string;
+      } | null = null;
+      if (!boardListEl) return { openDetails, focusTarget };
+
+      for (const det of boardListEl.querySelectorAll<HTMLDetailsElement>(
+        "details[open][data-details-kind]",
+      )) {
+        const card = det.closest<HTMLElement>("[data-card-key]");
+        const cardKey = card?.dataset.cardKey;
+        const kind = det.dataset.detailsKind;
+        if (cardKey && kind) {
+          openDetails.add(`${cardKey}::${kind}`);
+        }
+      }
+
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && boardListEl.contains(active)) {
+        const card = active.closest<HTMLElement>("[data-card-key]");
+        const cardKey = card?.dataset.cardKey;
+        if (cardKey) {
+          if (active.hasAttribute("data-pin-btn")) {
+            focusTarget = { cardKey, kind: "pin" };
+          } else if (active.hasAttribute("data-details-summary")) {
+            focusTarget = {
+              cardKey,
+              kind: "summary",
+              value: active.dataset.detailsSummary,
+            };
+          } else if (active.hasAttribute("data-jump-stop")) {
+            focusTarget = {
+              cardKey,
+              kind: "jump",
+              value: active.dataset.jumpStop,
+            };
+          } else if (active.tagName === "A") {
+            focusTarget = { cardKey, kind: "map" };
+          }
+        }
+      }
+
+      return { openDetails, focusTarget };
+    }
+
+    function restoreBoardInteractionState(state: {
+      openDetails: Set<string>;
+      focusTarget: {
+        cardKey: string;
+        kind: "pin" | "summary" | "jump" | "map";
+        value?: string;
+      } | null;
+    }): void {
+      if (!boardListEl) return;
+
+      for (const entry of state.openDetails) {
+        const sepIdx = entry.lastIndexOf("::");
+        if (sepIdx < 0) continue;
+        const cardKey = entry.slice(0, sepIdx);
+        const kind = entry.slice(sepIdx + 2);
+        const card = boardListEl.querySelector<HTMLElement>(
+          `[data-card-key="${CSS.escape(cardKey)}"]`,
+        );
+        const det = card?.querySelector<HTMLDetailsElement>(
+          `details[data-details-kind="${CSS.escape(kind)}"]`,
+        );
+        if (det) {
+          det.open = true;
+        }
+      }
+
+      if (state.focusTarget) {
+        const card = boardListEl.querySelector<HTMLElement>(
+          `[data-card-key="${CSS.escape(state.focusTarget.cardKey)}"]`,
+        );
+        if (!card) return;
+        let el: HTMLElement | null = null;
+        if (state.focusTarget.kind === "pin") {
+          el = card.querySelector<HTMLElement>("[data-pin-btn]");
+        } else if (
+          state.focusTarget.kind === "summary" &&
+          state.focusTarget.value
+        ) {
+          el = card.querySelector<HTMLElement>(
+            `[data-details-summary="${CSS.escape(state.focusTarget.value)}"]`,
+          );
+        } else if (
+          state.focusTarget.kind === "jump" &&
+          state.focusTarget.value
+        ) {
+          el = card.querySelector<HTMLElement>(
+            `[data-jump-stop="${CSS.escape(state.focusTarget.value)}"]`,
+          );
+        } else if (state.focusTarget.kind === "map") {
+          el = card.querySelector<HTMLElement>("a[href]");
+        }
+        el?.focus({ preventScroll: true });
+      }
+    }
+
     function renderBoard(forceFull = false): void {
+      ssrNoticeEl?.classList.add("hidden");
       const now = getEffectiveNow();
       const board = evaluateCountdownBoard(
         dataset,
@@ -1613,13 +1735,13 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       );
       updateHeaderAndKpis(board);
 
-      const nextMinuteKey = `${board.jst.ymd}T${board.jst.hour}:${board.jst.minute}`;
+      const nextYmd = board.jst.ymd;
       const nextBucketMap = new Map<string, string>();
       for (const item of board.items) {
         nextBucketMap.set(item.key, getStatusBucket(item));
       }
 
-      if (!forceFull && nextMinuteKey === lastMinuteKey) {
+      if (!forceFull && nextYmd === lastYmd) {
         let bucketChanged = nextBucketMap.size !== lastBucketMap.size;
         if (!bucketChanged) {
           for (const [k, v] of nextBucketMap) {
@@ -1635,7 +1757,7 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
         }
       }
 
-      lastMinuteKey = nextMinuteKey;
+      lastYmd = nextYmd;
       lastBucketMap = nextBucketMap;
 
       const visibleItems = filterAndSortItems(board.items);
@@ -1644,9 +1766,11 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
       }
 
       if (boardListEl) {
+        const preservedState = captureBoardInteractionState();
         boardListEl.innerHTML = visibleItems
           .map((item) => renderCardHtml(item, board.jst.secondsOfDay))
           .join("");
+        restoreBoardInteractionState(preservedState);
       }
       emptyStateEl?.classList.toggle("hidden", visibleItems.length > 0);
     }
@@ -1681,9 +1805,8 @@ const embeddedJson = JSON.stringify(dataset).replace(/</g, "\\u003c");
         getCurrentSelection(),
         now,
       );
-      const nextMinuteKey = `${board.jst.ymd}T${board.jst.hour}:${board.jst.minute}`;
 
-      let statusChanged = nextMinuteKey !== lastMinuteKey;
+      let statusChanged = board.jst.ymd !== lastYmd;
       if (!statusChanged) {
         for (const item of board.items) {
           if (lastBucketMap.get(item.key) !== getStatusBucket(item)) {
